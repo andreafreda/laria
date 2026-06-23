@@ -23,6 +23,7 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [ ] UI Angular (incl. dashboard configurazione LLM).
 - [ ] Docker (Dockerfile multi-stage + compose).
 - [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).
+- [ ] **Reingegnerizzare la memoria persistente dell'agente** (vedi sezione dedicata).
 
 ## Lingua
 - Codice, README, commenti, commit, **nomi di dominio/moduli**: **inglese**.
@@ -90,6 +91,37 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - Fallback e selezione modello per task (es. summary su modello economico/locale).
 
 ---
+
+## Memoria persistente dell'agente (DA REINGEGNERIZZARE)
+
+Requisito: **rivalutare da zero** come LARIA ricorda, valutando strade alternative
+a quella attuale di HARIA. Non dare per scontato l'approccio esistente.
+
+**Com'è oggi (HARIA):**
+- Tabella `conversations` (turni raw) con finestra recente (`MAX_HISTORY`).
+- Riassunto progressivo dei turni vecchi (1 chiamata LLM, "summary").
+- `notes` (note utente salvate, iniettate nel system prompt).
+- Recall keyword via **FTS5** (full-text) su note + conversazioni.
+- Limiti: niente semantica (solo keyword), summary lossy, memoria piatta (no episodica/semantica),
+  nessun decay/priorità, cresce nel prompt, non multi-utente robusto.
+
+**Strade alternative da valutare (scegliere/ibridare):**
+- **Memoria vettoriale / semantica (RAG)**: embeddings + vector store (sqlite-vec, pgvector,
+  Chroma, Qdrant) → recall per significato, non keyword. Embeddings locali o via provider.
+- **Memoria a livelli** (stile MemGPT/Letta): working / episodic / semantic / archival, con
+  paging dentro-fuori dal contesto gestito dall'agente.
+- **Librerie dedicate**: mem0, Letta (MemGPT), Zep — valutare adozione vs build-in.
+- **Knowledge graph** (entità/relazioni) per fatti strutturati su utente/casa/abitudini.
+- **Fatti estratti + dedup** (memory distillation): l'agente estrae fatti atomici, con
+  fonte/timestamp/confidenza, decay e merge (no duplicati) — simile alla memoria-file attuale ma automatica.
+- **Per-utente / multi-tenant**: isolamento e scope (globale vs per-utente vs per-stanza).
+- **Provider-agnostica**: gli embeddings devono passare dal layer provider (anche locali, no lock-in).
+
+**Criteri di scelta:** qualità recall, costo/latenza, locale-first (privacy), semplicità deploy
+(meno servizi esterni meglio → sqlite-vec/pgvector candidati forti), portabilità del dato.
+
+**Output atteso:** mini design doc che confronta 2-3 architetture e propone quella per LARIA,
+con schema dati e API di memoria (write/recall/forget). Da fare prima/insieme al port dello storage.
 
 ## Cose che aggiungo io (da valutare)
 
