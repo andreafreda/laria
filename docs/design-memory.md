@@ -56,6 +56,18 @@ memoria = file **Markdown** nel workspace (fonte di verità) + SQLite+**sqlite-v
   niente servizi esterni — combacia con "wiki della vita" e con come gira QUESTO assistente.
 - ➖ struttura semi-libera (serve disciplina/curation), scaling su molti fatti da gestire.
 
+### G. Piramide progressiva L0→L3 (TencentDB Agent Memory)
+4 livelli che si distillano l'uno dall'altro:
+- **L0 Raw Log**: conversazioni/eventi grezzi (evidence grounding, niente perdita).
+- **L1 Atomic Memory**: fatti/preferenze/vincoli/stati estratti dal rumore.
+- **L2 Scene Block**: cluster per progetto/topic/scenario (salvati in **Markdown**), recall contestuale.
+- **L3 Persona**: profilo stabile di preferenze/stile utente.
+Drill-down garantito Persona→Scenario(jsonl)→L0(refs); usa la Persona di default e scende agli
+Atomi solo quando servono i dettagli. **Open-source, fully local, zero API esterne.**
+- ➕ pragmatico (via di mezzo flat↔KG), locale, Markdown ispezionabile, riduce token, mappa la nostra tassonomia 1:1.
+- ➖ pipeline di distillazione da gestire (estrazione L0→L1→L2→L3), giovane.
+→ **Riferimento forte per LARIA**: è quasi esattamente "wiki della vita locale" + fatti, già strutturato.
+
 ### F. Ibrido (probabile direzione)
 SQLite singolo (dati) + sqlite-vec (embeddings) + fatti atomici (B) **e/o** file Markdown curati (E),
 recall ibrido, embedder astratto. Eventualmente un piccolo grafo per relazioni chiave (D-lite).
@@ -69,6 +81,9 @@ recall ibrido, embedder astratto. Eventualmente un piccolo grafo per relazioni c
 | **Cognee** | KG da "tutto" | sì | open-source | costruisce grafo di conoscenza generico |
 | **MemMachine** | memoria ground-truth per agenti personali | ? | ? | emergente (paper) |
 | **OpenClaw memory** | file Markdown + sqlite-vec, hybrid search, flush | sì, locale | ? | = "wiki della vita"; ancora in evoluzione |
+| **TencentDB Agent Memory** | piramide L0→L3 (vedi G) | **sì, fully local, zero API esterne** | open-source | candidato forte; Markdown+jsonl, drill-down, −token |
+| **SuperMemory** | memory+context engine, graph | self-host solo enterprise | a pagamento (usage) | #1 benchmark, MCP universale; self-host gated → contro modello aperto |
+| **"agent memory" (da chiarire)** | ? | ? | ? | nome ambiguo: capire se è prodotto specifico (es. AWS AgentCore Memory) o generico |
 | **sqlite-vec / pgvector** | *infrastruttura* vettori | sì | open | mattoni per build-in (no logica memoria) |
 
 Fonti (verificare, alcune 2026/near-future): mem0.ai/blog/state-of-ai-agent-memory-2026,
