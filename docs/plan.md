@@ -1,11 +1,36 @@
-# Piano — HARIA standalone (fork)
+# Piano — LARIA (fork standalone di HARIA)
 
-Obiettivo: trasformare HARIA da addon Home Assistant a **prodotto autonomo**, deployabile
-come Docker image, con UI web propria, supporto multi-LLM, e Home Assistant come
-*integrazione opzionale* invece che dipendenza.
+> ⚠️ **QUESTO FILE È LA FONTE DI VERITÀ DEL PROGETTO.** La conversazione con l'assistente
+> può essere compattata/persa in qualsiasi momento: tutto ciò che conta (decisioni, stato,
+> prossimi passi) DEVE stare qui e aggiornato. Se l'assistente riparte da zero, legge questo.
 
-Stato attuale: addon HA monolitico (Python 3.12, SQLite `/config/haria.db`, MQTT discovery,
-aiohttp ingress, Telegram, scheduler, claude_engine). Versione 0.3.3.
+Obiettivo: LARIA = **prodotto autonomo** (standalone-first), deployabile come Docker image,
+con UI web propria (dashboard vere = app nativa), supporto multi-LLM, e Home Assistant come
+**integrazione opzionale additiva** (MQTT + comandi remoti), mai dipendenza.
+
+Origine: fork di HARIA (addon HA monolitico, Python 3.12, SQLite, MQTT, aiohttp ingress,
+Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/laria.
+
+## Stato avanzamento (aggiornare sempre)
+- [x] Repo + scheletro monorepo (core/ connector-ha/ ui/ docker/ docs/), licenza PolyForm Noncommercial.
+- [x] README standalone-first (EN), .gitignore (segreti esclusi), .env.example.
+- [x] Core bootstrap: `laria.config` (env, no Supervisor) + `laria.llm` (provider astratto + Anthropic + registry) + test.
+- [ ] Port storage (memory package) de-personalizzato (no nomi conti/membri hardcoded → da config).
+- [ ] Port moduli (finance/food/agenda/news/web_search) sull'astrazione provider+storage.
+- [ ] Engine agentico provider-agnostic (claude_engine → laria engine).
+- [ ] Canali (Telegram) astratti; web API (REST/WS).
+- [ ] connector-ha (REST/WS + subscribe_events + MQTT mirror).
+- [ ] UI Angular (incl. dashboard configurazione LLM).
+- [ ] Docker (Dockerfile multi-stage + compose).
+- [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).
+
+## Lingua
+- Codice, README, commenti, commit, **nomi di dominio/moduli**: **inglese**.
+- Piani e docs interni (questo file): italiano.
+- C'è uno **step dedicato di traduzione** quando si porta il codice da HARIA (oggi IT).
+  Terminologia da anglicizzare (esempi): `bollette` → **bills/utilities**, `economia` → **finance**,
+  `cibo`/`food_diary` → **food**, `conti` → **accounts**, `salvadanai/obiettivi` → **savings goals**,
+  `spese` → **expenses**, `prelievo contanti` → **cash withdrawal**. Da consolidare in un glossario.
 
 ---
 
@@ -57,6 +82,10 @@ aiohttp ingress, Telegram, scheduler, claude_engine). Versione 0.3.3.
 - Astrarre `claude_engine` dietro un'interfaccia provider (chat + tool-calling).
 - Provider: Anthropic, OpenAI, Google Gemini, + **locali** (Ollama, LM Studio, llama.cpp / OpenAI-compatible endpoint).
 - Config per-utente o globale: provider + modello + key/endpoint (UI).
+- **Dashboard di configurazione LLM nell'app** (requisito): pagina UI dedicata per
+  gestire provider, modelli, API key/endpoint, parametri (max_tokens, temperatura),
+  selezione modello per task (es. summary su modello economico/locale), test connessione,
+  e (futuro) stato/uso/costi. Le key si salvano cifrate, mai nel repo.
 - Attenzione: tool-calling/prompt-caching differiscono per provider → layer di adattamento (normalizzare tool schema, gestire chi non supporta cache/feature).
 - Fallback e selezione modello per task (es. summary su modello economico/locale).
 
