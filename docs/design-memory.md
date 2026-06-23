@@ -82,7 +82,8 @@ recall ibrido, embedder astratto. Eventualmente un piccolo grafo per relazioni c
 | **MemMachine** | memoria ground-truth per agenti personali | ? | ? | emergente (paper) |
 | **OpenClaw memory** | file Markdown + sqlite-vec, hybrid search, flush | sì, locale | ? | = "wiki della vita"; ancora in evoluzione |
 | **TencentDB Agent Memory** | piramide L0→L3 (vedi G) | **sì, fully local, zero API esterne** | open-source | candidato forte; Markdown+jsonl, drill-down, −token |
-| **SuperMemory** | memory+context engine, graph | self-host solo enterprise | a pagamento (usage) | #1 benchmark, MCP universale; self-host gated → contro modello aperto |
+| **SuperMemory** | memory+context engine, graph | **sì, fully local (offline con Ollama), 1 binary** | **MIT** (repo OSS) | **#1 benchmark** (LongMemEval/LoCoMo/ConvoMem), MCP universale, multimodale. Candidato di primissima fascia. Esiste anche cloud a consumo (opzionale). |
+| **OpenMemory (CaviraOSS)** | local persistent memory store | sì, locale | open | memoria locale per Claude/Copilot/Codex ecc.; da valutare |
 | **"agent memory" (da chiarire)** | ? | ? | ? | nome ambiguo: capire se è prodotto specifico (es. AWS AgentCore Memory) o generico |
 | **sqlite-vec / pgvector** | *infrastruttura* vettori | sì | open | mattoni per build-in (no logica memoria) |
 
