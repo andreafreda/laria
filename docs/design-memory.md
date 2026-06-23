@@ -87,6 +87,90 @@ recall ibrido, embedder astratto. Eventualmente un piccolo grafo per relazioni c
 | **"agent memory" (da chiarire)** | ? | ? | ? | nome ambiguo: capire se è prodotto specifico (es. AWS AgentCore Memory) o generico |
 | **sqlite-vec / pgvector** | *infrastruttura* vettori | sì | open | mattoni per build-in (no logica memoria) |
 
+## 3b. Analisi dettagliata per soluzione (pro/cons + fit LARIA)
+
+Legenda fit: ⭐ forte · ◐ medio · ✗ debole (per i nostri criteri: locale, open, semplice, controllabile).
+
+### mem0 — ⭐/◐
+*Cosa:* memory layer "bolt-on"; estrae fatti dai messaggi e li distilla (ADD/UPDATE/DELETE/NOOP); store ibrido vettori+grafo+kv.
+- ➕ default per "ricorda l'utente"; community enorme (47k★); footprint piccolo (~1.7k token/conv); self-host (Apache-2.0); aggiornamento/contraddizioni gestiti.
+- ➖ qualità dipende dall'estrazione; report di affidabilità sotto carico (memorie non sempre indicizzate, recall fail); ingestion oltre la chat limitata; spinge il cloud a pagamento.
+- *Fit:* ottimo come **backend** dietro la nostra interfaccia; rischio lock-in mentale ma è disaccoppiabile.
+
+### SuperMemory — ⭐
+*Cosa:* memory+context engine, grafo di memoria; 1 binary, offline con Ollama.
+- ➕ **#1 sui benchmark** (LongMemEval/LoCoMo/ConvoMem); **MIT**, fully local; multimodale (PDF/img/video/code); MCP universale; veloce.
+- ➖ progetto giovane in rapida evoluzione (API mobili); cloud a consumo affianca l'OSS (attenzione a feature solo-cloud); grafo = complessità.
+- *Fit:* candidato di **primissima fascia** (open+local+top recall). Da provare come backend o riferimento.
+
+### TencentDB Agent Memory — ⭐
+*Cosa:* piramide progressiva L0→L3 (raw→atomic→scene(Markdown)→persona), fully local, zero API esterne.
+- ➕ **locale, open, zero dipendenze cloud**; Markdown ispezionabile; drill-down con evidenza; riduce token (−61% con OpenClaw); struttura = nostra tassonomia 1:1.
+- ➖ progetto recente; pipeline di distillazione L0→L3 da capire/operare; ecosistema piccolo.
+- *Fit:* **fortissimo riferimento architetturale** (anche se non lo adottiamo, copiamo il modello L0-L3).
+
+### Letta (MemGPT) — ◐
+*Cosa:* runtime dove l'agente È la sua memoria; core/recall/archival con paging OS-like, self-editing.
+- ➕ coerenza long-horizon ("ieri X fallì"); open-source self-host; potente per agenti autonomi.
+- ➖ complesso, latenza/costo del loop; **non deterministico** (non sai esattamente cosa ricorda/dimentica); più "runtime" che "modulo".
+- *Fit:* poco adatto se vogliamo **controllo/prevedibilità** (sistema famiglia). Buone idee (livelli) da rubare.
+
+### Zep / Graphiti — ◐
+*Cosa:* knowledge graph **temporale** con finestre di validità dei fatti.
+- ➕ migliore sul ragionamento temporale (fatti che cambiano); relazioni ricche; modella l'evoluzione.
+- ➖ **costoso** (~600k token/conv vs 1.7k mem0); retrieval post-ingest a volte fallace; cloud-first; modello mentale ripido.
+- *Fit:* la temporalità ci serve, ma il costo/complessità ora è troppo. Tenere come ispirazione (validità temporale sui fatti).
+
+### Cognee — ◐
+*Cosa:* piattaforma memoria open-source che costruisce **knowledge graph** da dati eterogenei (doc/img/Slack…); backend grafo Kuzu in locale; pipeline "cognify"; 14 modalità di retrieval.
+- ➕ grafo+vettori ibrido potente; **locale** (Kuzu) con Ollama; feature complete senza pagare; multi-fonte.
+- ➖ orientato a "estrai conoscenza da documenti" più che memoria conversazionale; KG = complessità/manutenzione; può essere overkill per famiglia.
+- *Fit:* utile se andremo verso KG/ingestione documenti; per ora pesante.
+
+### OpenMemory (CaviraOSS) — ◐
+*Cosa:* memory store **locale** persistente per app LLM (Claude desktop/Copilot/Codex…).
+- ➕ locale, open, semplice, pensato per integrarsi con client esistenti.
+- ➖ meno maturo/benchmarkato; feature di lifecycle (decay/contraddizioni) da verificare.
+- *Fit:* candidato leggero locale; da valutare in PoC.
+
+### Memary — ✗/◐
+*Cosa:* memory layer leggero open (KG semplice + vector search), per **prototipazione**.
+- ➕ accessibile, semplice, buono per imparare il graph-augmented memory.
+- ➖ esplicitamente **non per produzione**; feature limitate.
+- *Fit:* solo come riferimento didattico.
+
+### Memobase — ◐
+*Cosa:* memoria long-term **basata su profilo utente** per chatbot.
+- ➕ centrato su user-profile/persona (utile per L3 persona); semplice.
+- ➖ ambito stretto (profilo), meno su episodica/fatti generali.
+- *Fit:* idee per il layer "persona"; non come motore unico.
+
+### LangMem / LangGraph store — ◐
+*Cosa:* primitive di memoria dentro l'ecosistema LangChain/LangGraph (checkpoint = short-term, store = long-term; estrazione async di fatti/preferenze).
+- ➕ integrato se usi LangGraph; pattern chiari (short vs long); estrazione background.
+- ➖ ci legherebbe a LangChain/LangGraph (dipendenza pesante che non vogliamo); valore minore fuori da quell'ecosistema.
+- *Fit:* ✗ se non adottiamo LangGraph (non in piano).
+
+### AWS Bedrock AgentCore Memory — ✗
+*Cosa:* servizio gestito AWS: short-term (checkpoint) + long-term (estrazione async di fatti/preferenze/summary).
+- ➕ zero infrastruttura, scalabile, integra LangGraph.
+- ➖ **cloud/managed, lock-in AWS, dati fuori** → contro locale-first/privacy; a pagamento.
+- *Fit:* ✗ per LARIA (viola locale-first).
+
+### Infrastruttura (mattoni, non logica di memoria)
+- **sqlite-vec**: vettori dentro SQLite → ⭐ per noi (1 file, locale, zero servizi). 
+- **pgvector**: vettori in Postgres → ◐ (quando passeremo a Postgres multi-tenant).
+- **Chroma / Qdrant**: vector DB dedicati → ◐ (servizio extra; utili a scala).
+- **txtai**: embeddings+search all-in-one → ◐ alternativa leggera.
+Questi NON danno la logica di memoria (estrazione/decay/scope): la mettiamo noi o via uno dei motori sopra.
+
+### Sintesi
+- **Locali+open+forti**: SuperMemory (recall top), TencentDB (struttura ideale), mem0 (maturo), Cognee (se KG).
+- **Da rubare idee, non adottare**: Letta (livelli), Zep (validità temporale).
+- **Da escludere** (per locale-first): AWS AgentCore; LangMem se no-LangGraph.
+- **Mattone base** se costruiamo noi: sqlite-vec.
+- La nostra astrazione `MemoryBackend` permette di **partire con uno** (es. SuperMemory o build-in sqlite-vec sul modello L0-L3 TencentDB) **e cambiarlo** senza toccare l'engine.
+
 Fonti (verificare, alcune 2026/near-future): mem0.ai/blog/state-of-ai-agent-memory-2026,
 particula.tech (mem0 vs zep vs letta vs cognee), atlan.com best-frameworks-2026,
 github coolmanns/openclaw-memory-architecture, mem0 openclaw integration guide.
