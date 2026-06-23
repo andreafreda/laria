@@ -12,6 +12,9 @@ Ultimo aggiornamento: bootstrap core (config + LLM layer).
   creato a mano dall'utente; per nuovi repo serve crearli a mano o installare gh.
 
 ## Regole ferree
+- **HARIA è READ-ONLY**: `C:\projects\haria` NON si tocca mai. È solo sorgente da cui
+  leggere per portare il codice in LARIA. Resta in produzione com'è.
+- **Glossario obbligatorio**: nomi EN in `docs/glossary.md` — usare quelli per ogni identificatore.
 - **Repo pubblico** → ZERO segreti e ZERO dati personali nel codice/commit.
   - Segreti: solo `.env` (gitignored). HARIA ha token in chiaro in `configuration.yaml`/`config.py`: NON portarli.
   - Dati personali: HARIA `econ_def.py` contiene nomi reali (conti `postepay_andrea`, intestatari `andrea`/`marina`).
