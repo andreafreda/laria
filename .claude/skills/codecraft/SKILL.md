@@ -19,10 +19,12 @@ project-agnostic; apply them in any codebase and language.
 
 ## Not in scope
 
-This skill is about how code reads, not what it does. It does not cover
-performance and optimization, security review, or functional and architectural
-correctness. Those come first and have their own focus; reach for codecraft when
-the goal is making code clear and maintainable.
+This skill is about how code reads, not what it does. It does not drive
+performance and optimization, security review, or feature and architecture
+decisions; those come first and have their own focus. The SOLID and seam notes
+below are secondary lenses to keep a readability change honest, not an invitation
+to redesign the system. Reach for codecraft when the goal is making code clear
+and maintainable.
 
 ## The one rule, and how to break ties
 
@@ -56,14 +58,14 @@ Still unclear? Pick the version a new teammate would understand fastest.
 6. **Don't over-abstract.** A helper earns its place only when it removes real
    duplication or names a real concept, not before.
 7. **Length is fine; density is not.** Many short obvious functions beat few dense
-   ones. Split a file when it mixes unrelated concerns; if you must scroll to read
-   a function, it is a split candidate.
+   ones. Split a file when it mixes unrelated concerns; a function past roughly 40
+   lines (more than one screen) is a split candidate.
 8. **Make the contract visible.** Type public functions using the language's own
    system (Python hints, TypeScript and C# and Java typed signatures, Go typed
    params). The signature plus one line of intent should tell the reader how to
    use it without reading the body.
 9. **Document the public surface, human-first.** Give public or exported symbols,
-   and any function long enough that you would scroll to read it, a doc comment
+   and any function past roughly 40 lines, a doc comment
    saying what it is for and when to reach for it (not a restatement of the
    signature); note non-obvious inputs, outputs, side effects and gotchas. For
    private one-liners follow the project's existing convention: if it documents
@@ -174,31 +176,29 @@ mind, and never add ceremony for a single case (YAGNI):
 - **D, Dependency Inversion:** depend on an abstraction (a provider, a
   repository), not a concrete vendor or library at the call site.
 
-## Smells to fix (roughly by impact)
+## Smells to fix
 
-Structural (these hide bugs or block change):
+The principles above say what good looks like; these are extra detection signals
+not already covered by a numbered principle. Fix the structural ones first, they
+hide bugs or block change.
 
-- A blanket `except`/`catch`, or an error caught and silently dropped (principle 10).
-- A function or class doing too much: needs internal section comments, or has
-  "and" in its name (principles 4, 7).
+Structural:
+
+- A function or class doing too much: it needs internal section comments, or has
+  "and" in its name.
 - Duplicated logic, or shotgun surgery (one change forces edits across many files,
   signalling a missing seam).
-- Deep nesting or long boolean chains; flatten with guard clauses.
 - Feature envy: logic that mostly touches another module's data belongs there.
 - Leaky abstraction: an interface exposing its implementation.
 
-Readability (these slow the reader):
+Readability:
 
-- Cryptic or abbreviated names; single-letter vars outside tiny loops (principle 2).
-- Missing or signature-echoing doc on a public symbol (principle 9).
-- Comments restating code, or absent where a why is needed (principle 3).
-- Magic numbers or strings: name them as constants.
 - Boolean trap: `f(true, false)` is unreadable at the call site; use named args or
   distinct functions.
 - Long parameter lists or data clumps: group related args into a small object.
 - Primitive obsession: model the concept instead of passing bare strings or dicts.
 - Clever comprehensions or expressions doing real work; unfold them.
-- Inconsistent param or return shapes across sibling functions (principle 5).
+- Magic numbers or strings: name them as constants.
 - A file with section banners (`# ---- accounts ----`) is several modules in a
   trench coat; each banner is a candidate split.
 - Test code treated as second class: unclear test names (a name should state the
@@ -230,5 +230,4 @@ magic appears. Skip it when there is only one such function (YAGNI).
 
 Read the diff as a stranger would; rewrite any line that makes you pause to
 decode it. Then scan for a structural smell or a SOLID violation a cheap change
-would fix, and fix it if it keeps the code simple. Last, check the prose: no
-dashes as sentence punctuation (principle 12).
+would fix, and fix it if it keeps the code simple.
