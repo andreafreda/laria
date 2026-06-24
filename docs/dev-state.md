@@ -3,7 +3,7 @@
 > Doc interno (IT). Insieme a `plan.md` è la **fonte di verità**. Se la sessione si
 > compatta, leggere QUESTO per riprendere col dettaglio tecnico. Aggiornare a ogni step.
 
-Ultimo aggiornamento: scaffold memory wrapper (`core/laria/memory/`), 10 test verdi.
+Ultimo aggiornamento: port storage finance (`core/laria/storage/`) tradotto+de-personalizzato, 19 test verdi.
 
 ## Coordinate
 - Repo LARIA: `C:\projects\laria` → github.com/andreafreda/laria (branch `main`).
@@ -51,6 +51,13 @@ docs/         plan.md (piano+tracker), dev-state.md (questo)
 - `laria/llm/registry.py`: `get_provider(settings)` → per ora solo 'anthropic' (import lazy), altrimenti ValueError.
 - `laria/llm/__init__.py`: ri-esporta tipi + get_provider.
 - `tests/test_config.py`, `tests/test_llm.py`: 5 test verdi. Run: `cd core && python -m pytest -q`.
+
+## FATTO — storage finance (`core/laria/storage/`)
+- `db.py`: foundation SQLite. `connect()` + `init_db()` da `get_settings().db_path` (no Supervisor, no `/config`). WAL+busy_timeout+foreign_keys. Crea dir, seed `DEFAULT_CATEGORIES` (EN generiche). `CATEGORY_TRANSFER="transfer"` (categoria sistema, esclusa dai report). Schema finance: `finance_accounts/transactions/categories/budgets/rules/goals`.
+- `finance.py`: port completo di `memory/econ.py`, tradotto EN, **de-personalizzato** (niente MEMBRI/CONTI hardcoded; owner default 'family'; conti creati via `add_account`/config). API EN: accounts (list/get/add/update/delete), transactions (add/list/update/delete/get_balance), rules (add/delete/list/apply_rule/apply_rules), categories (list/normalize/rename/merge/delete), budgets (set/delete/list/get_budget_status), goals (set_goal/add_to_goal/get_goals/delete_goal), reports (expense_summary/monthly_trend/category_spending_year/years_with_data/monthly_category_matrix/recent_transactions/get_balances/balances_by_owner/reset_finance).
+- `tests/test_finance.py`: 9 test su DB temp (LARIA_DB_PATH env + reload_settings). Totale 19 verdi.
+- Differenze vs HARIA: droppata migrazione one-shot `deactivate_generic_conti` (cruft personale); `recent_transactions` usa chiavi piene (date/amount/category/description) non compatte d/i/c/n (vincolo MQTT non più valido).
+- **Prossimo storage**: port food (`memory/food.py`→`storage/food.py`) + utilities (`bollette.py`→`storage/utilities.py`); poi conversation-store (history/notes/summary) — valutare se va in storage o resta separato dal MemoryBackend.
 
 ## Mappa sorgente HARIA → destinazione LARIA (per i prossimi port)
 HARIA `haria/app/`:
