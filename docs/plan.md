@@ -21,7 +21,7 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [~] Moduli dominio come tool registrabili: **finance + food + utilities fatti** (`modules/`, 21 tool). Restano: nutrition lookup, econ_import parser.
 - [x] **Convenzione codice**: skill `/codecraft` (repo `.claude/skills/`, globale, pubblicata su `andreafreda/skills`) project-agnostic: leggibilità umana, SOLID con giudizio, no code smell, docstring human-oriented, niente trattini come punteggiatura in prosa.
 - [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite attuale: **46 test verdi**.
-- [ ] Canali (Telegram) astratti; web API (REST/WS).
+- [~] Canali: **web API JSON fatta** (`core/laria/app.py` composition root + `core/laria/web/`: POST /api/chat, GET /health, `python -m laria.web`). Restano: WebSocket streaming, Telegram astratto.
 - [ ] connector-ha (REST/WS + subscribe_events + MQTT mirror).
 - [ ] UI Angular (incl. dashboard configurazione LLM).
 - [ ] Docker (Dockerfile multi-stage + compose).

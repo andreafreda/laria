@@ -100,7 +100,14 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_modules_food_utilities.py`: 5 test (dispatch diretto su registry). Totale 46 verdi.
 - Restano moduli logici: nutrition lookup (OFF/USDA), econ_import parser (estratti banca).
 
-## Prossimo: canali/web API (REST/WS), poi connector-ha, UI, Docker
+## FATTO — composition root + web API JSON
+- `app.py` (composition root): `build_engine(settings)` cabla provider (`get_provider`) + memory (`get_memory_backend`) + registra moduli finance/food/utilities → `Engine` pronto. Unico punto che sa come si incastrano i pezzi.
+- `web/app.py`: `create_app(engine)` aiohttp. `GET /health`, `POST /api/chat` (body {user_id?, text, user_config?} → {reply}). Engine iniettato (test con stub). `web.AppKey` per lo stash (idiomatic). Error handling specifico: JSON invalido→400, text vuoto→400, errore engine→500 loggato non leaked.
+- `web/server.py`: `serve()` = build_engine + init_db on_startup + web.run_app (host/port da settings). `web/__main__.py`: `python -m laria.web` (entrypoint container).
+- `tests/test_web_api.py`: 5 test con StubEngine + aiohttp TestClient (health, chat reply, default user_id, 400 text vuoto, 400 JSON invalido). Totale 51 verdi.
+- LARIA ora avviabile end-to-end: `python -m laria.web` (serve ANTHROPIC_API_KEY in env).
+
+## Prossimo: WebSocket streaming, Telegram, connector-ha, UI Angular, Docker
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
