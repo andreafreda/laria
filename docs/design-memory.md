@@ -157,6 +157,14 @@ Legenda fit: ⭐ forte · ◐ medio · ✗ debole (per i nostri criteri: locale,
 - ➖ **cloud/managed, lock-in AWS, dati fuori** → contro locale-first/privacy; a pagamento.
 - *Fit:* ✗ per LARIA (viola locale-first).
 
+### OpenHuman — ⭐ (riferimento) / ⚠️ licenza
+*Cosa:* assistente personale local-first con **Memory Tree**: ogni sorgente (Gmail/Slack/GitHub/Notion/note)
+→ Markdown canonico → chunk ≤3k token → scoring → **alberi di summary per-source/per-topic/per-day** → SQLite locale.
+118+ integrazioni OAuth. Rust+Tauri.
+- ➕ local-first, deterministico, **memoria leggibile** (Markdown), summary-tree = nostra L0-L3 con altro nome, tantissime integrazioni; valida la nostra direzione.
+- ➖ **GPL3** (copyleft): non importabile nel nostro stack MIT/PolyForm senza contaminazione → usare come **riferimento di design**, non come dipendenza linkata. Rust+Tauri (stack diverso dal nostro Python).
+- *Fit:* **riferimento architetturale top** (Memory Tree). Convergenza con TencentDB conferma il modello.
+
 ### Infrastruttura (mattoni, non logica di memoria)
 - **sqlite-vec**: vettori dentro SQLite → ⭐ per noi (1 file, locale, zero servizi). 
 - **pgvector**: vettori in Postgres → ◐ (quando passeremo a Postgres multi-tenant).
@@ -199,6 +207,29 @@ Lo storage va **dietro un'astrazione** (`StorageBackend`) → sostituibile come 
 (vettori+BM25) nativo, zero servizi; perfetto per la scala famiglia e per il deploy Docker.
 **Scala/futuro:** **LanceDB** (HNSW, multimodale, versioning) o **DuckDB+VSS** (se analytics);
 **pgvector** quando andremo multi-tenant server. Tutti dietro `StorageBackend` → si cambia senza riscrivere la logica.
+
+## 3d. Ingestione & sharing — lezioni da Mirage (layer separato dalla memoria)
+
+Mirage (strukto-ai, Apache-2.0) NON è memoria: è un **filesystem virtuale unificato** che monta
+sorgenti (S3/Drive/Slack/Gmail/Redis…) come un albero unico. Non lo adottiamo come motore, ma
+**rubiamo idee** per il layer ingestione/sharing di LARIA (distinto dal motore di memoria):
+
+- **Sorgenti come mount uniformi**: ogni fonte (banca, Gmail, HA, note) esposta con la stessa
+  interfaccia → l'agente legge/scrive in modo uniforme. Per noi: un `SourceAdapter` comune per
+  l'ingestione verso la memoria (separato dall'estrazione).
+- **Cache a due livelli + stato condiviso (Redis)**: ripetere lavoro contro backend remoti colpisce
+  lo stato locale, e la cache è condivisa tra worker/processi/macchine. Lezione per il nostro
+  **sharing**: la memoria/cache deve poter essere condivisa tra più processi/istanze (UI, scheduler,
+  canali) senza duplicazioni né race → opzione store condiviso (es. Redis) dietro astrazione.
+- **Snapshot & versioning tipo git**: snapshot dello stato, clone per run paralleli, rollback.
+  Lezione: la **memoria versionabile** (snapshot/rollback) è utile per audit, undo, e "memory flush"
+  sicuri prima della compattazione.
+- **Bash-compatibile / interfaccia minima**: qualunque LLM che sa bash sa già usarlo (zero vocabolario
+  nuovo). Lezione: l'API di memoria deve essere **piccola e ovvia** (poche primitive) per qualunque modello.
+
+In sintesi, separiamo 3 livelli: **(1) ingestione/sorgenti** (idee Mirage) → **(2) motore di memoria**
+(L0-L3, nostro) → **(3) recall/contesto**. Lo sharing tra processi/istanze è una proprietà del layer
+storage/cache, non del modello dati.
 
 ## 4. Astrazione (qualunque sia il motore)
 ```
