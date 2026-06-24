@@ -22,7 +22,7 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [x] **Convenzione codice**: skill `/codecraft` (repo `.claude/skills/`, globale, pubblicata su `andreafreda/skills`) project-agnostic: leggibilità umana, SOLID con giudizio, no code smell, docstring human-oriented, niente trattini come punteggiatura in prosa.
 - [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite attuale: **46 test verdi**.
 - [~] Canali: **web API JSON fatta** (`core/laria/app.py` composition root + `core/laria/web/`: POST /api/chat, GET /health, `python -m laria.web`). Restano: WebSocket streaming, Telegram astratto.
-- [ ] connector-ha (REST/WS + subscribe_events + MQTT mirror).
+- [~] connector-ha: **client REST/WS + tool HA fatti** (`core/laria/connectors/ha/`: HaClient con DI, tool get_house_state/control_device/speak_alexa, registrati dal composition root solo se HA_ENABLED). Restano: subscribe_events, MQTT mirror, calendar tools.
 - [ ] UI Angular (incl. dashboard configurazione LLM).
 - [~] Docker: **immagine core fatta** (`docker/Dockerfile` python-slim non-root + healthcheck, `docker/compose.yaml` con volume dati, `.dockerignore`; `python -m laria.web`). Build non ancora verificata in locale (Docker Desktop engine spento). Resta: immagine combinata con UI.
 - [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).

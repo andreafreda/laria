@@ -114,7 +114,15 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `docker/README.md`: quick start + curl esempi.
 - Verifica: import entrypoint ok (`laria.web.server`/`laria.app`/`laria.web`). Build immagine NON eseguita (Docker Desktop engine spento sul dev box); da fare quando l'engine è attivo.
 
-## Prossimo: WebSocket streaming, Telegram, connector-ha, UI Angular, immagine combinata UI
+## FATTO — connector Home Assistant (additivo)
+- `connectors/ha/client.py`: `HaClient` (classe, DI url/token via `from_settings`, no global HARIA). REST get_states/call_service/get_calendar_events + ws_command. Errori mappati a ConnectionError/PermissionError/TimeoutError.
+- `connectors/ha/tools.py`: `register_ha_tools(registry, client)` con closure sul client. Tool: get_house_state (discovery senza entity_ids = lista entity_id+nome; con = stato live), control_device, speak_alexa (announce→tts fallback). Errori di raggiungibilità → stringa leggibile per il modello, non crash del turno.
+- Composition root `app.py`: registra i tool HA SOLO se `settings.ha.enabled` (import lazy). LARIA gira identico senza HA.
+- Scelta: messo in `laria.connectors.ha` dentro core (additivo, nessuna nuova dep, dentro la suite). Estraibile a package `connector-ha/` separato dopo se serve.
+- `tests/test_connector_ha.py`: 6 test con StubHaClient (registrazione, discovery, stato specifico, control_device, speak_alexa, HA irraggiungibile→messaggio). Totale 57 verdi.
+- NON ancora portati da HARIA: subscribe_events (WS push), MQTT mirror (mqtt_pub/mqtt_topics), calendar tools, entity_cache su DB (token-opt).
+
+## Prossimo: UI Angular, WebSocket streaming, Telegram, MQTT mirror, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.

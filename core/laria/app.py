@@ -36,4 +36,10 @@ def build_engine(settings: Settings | None = None) -> Engine:
     register_food_tools(registry)
     register_utilities_tools(registry)
 
+    # Home Assistant is optional and additive: its tools appear only when HA is
+    # configured, so the engine runs unchanged without it.
+    if settings.ha.enabled:
+        from .connectors.ha import HaClient, register_ha_tools
+        register_ha_tools(registry, HaClient.from_settings(settings.ha))
+
     return Engine(provider, memory, registry=registry, settings=settings)
