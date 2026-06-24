@@ -49,11 +49,38 @@ value, it simply stops talking to your home devices.
 - **Native app is the source of truth**: LARIA's UI owns the dashboards; HA/Lovelace is just
   an optional mirror fed via MQTT.
 - **Integrations are additive**: HA (and future platforms) extend LARIA, never gate it.
-- **Multi-LLM**: universal provider layer (phase 1: Anthropic).
+- **Multi-LLM**: universal provider layer (Anthropic and OpenAI-compatible/Ollama).
 - **Secrets stay out of the repo**: `.env` / secret manager only.
 
+## Quickstart
+
+Run the API with Docker (the SQLite database persists in a volume):
+
+```bash
+ANTHROPIC_API_KEY=sk-... docker compose -f docker/compose.yaml up --build
+# then:
+curl -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"me","text":"add a 12 euro grocery expense on my checking account"}'
+```
+
+Or run the core directly:
+
+```bash
+cd core && pip install -e ".[dev]"
+python -m pytest -q                 # 65 offline tests
+ANTHROPIC_API_KEY=sk-... python -m laria.web
+```
+
+Use a local model instead of Anthropic by setting `LLM_PROVIDER=ollama` (and
+`LLM_MODEL` to an installed model). See `.env.example` for all settings.
+
 ## Status
-Bootstrap. See [docs/plan.md](docs/plan.md) for the full plan (in Italian).
+Core backend works end to end: config, LLM providers (Anthropic and
+OpenAI-compatible/Ollama), agent memory, storage (finance, food, utilities,
+conversations), the agentic engine with domain tools, the optional Home Assistant
+connector, a JSON API, and a Docker image. The Angular UI is next. See
+[docs/plan.md](docs/plan.md) for the full plan (in Italian).
 
 ## License
 **PolyForm Noncommercial 1.0.0**, free for noncommercial use. Commercial use requires a

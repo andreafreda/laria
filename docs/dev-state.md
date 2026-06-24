@@ -129,6 +129,12 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_openai_provider.py`: 5 test (conversione messaggi/tool/tool_choice, parse, selezione registry ollama+openai). Totale 62 verdi.
 - Astrazione provider provata con 2 implementazioni reali; engine invariato.
 
+## FATTO — consolidamento backend
+- CI: `.github/workflows/ci.yml` (pytest su push/PR, Python 3.11+3.12, offline, niente segreti).
+- `.env.example` aggiornato: LLM_PROVIDER multi + OPENAI_BASE_URL/OLLAMA_BASE_URL + MEMORY_*.
+- `tests/test_app.py`: smoke test `build_engine` (provider ollama, no key): registra core+finance+food+utilities; HA off di default, on con HA_ENABLED. 65 verdi.
+- README: Quickstart (docker + core) + Status aggiornato.
+
 ## Prossimo: UI Angular, WebSocket streaming, Telegram, MQTT mirror, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
