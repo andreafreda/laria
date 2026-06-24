@@ -7,5 +7,11 @@ matching ``register_*`` function.
 from __future__ import annotations
 
 from .finance import register_finance_tools
+from .food import register_food_tools
+from .utilities import register_utilities_tools
 
-__all__ = ["register_finance_tools"]
+__all__ = [
+    "register_finance_tools",
+    "register_food_tools",
+    "register_utilities_tools",
+]

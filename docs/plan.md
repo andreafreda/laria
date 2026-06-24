@@ -18,7 +18,7 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [x] **Memory wrapper** `core/laria/memory/`: `MemoryBackend` astratto + `FakeBackend` + `Mem0Backend` + `Embedder` + registry (mem0 plug&play).
 - [x] **Port storage COMPLETO** `core/laria/storage/` de-personalizzato, EN, settings-driven: finance, food, utilities, conversations, misc (33 test verdi).
 - [x] **Engine agentico provider-agnostic** `core/laria/engine/`: loop tool-use su `provider.generate`, ToolRegistry pluggable, core-tool memory/recall/respond, prompt EN, summary rolling (38 test verdi).
-- [~] Moduli dominio come tool registrabili: **finance fatto** (`modules/finance.py`, 8 tool: add_transaction, list_recent_transactions, get_balances, expense_summary, set_budget, budget_status, list_goals, add_to_goal). Restano: food, utilities, nutrition lookup, econ_import parser.
+- [~] Moduli dominio come tool registrabili: **finance + food + utilities fatti** (`modules/`). Restano: nutrition lookup, econ_import parser.
 - [ ] Canali (Telegram) astratti; web API (REST/WS).
 - [ ] connector-ha (REST/WS + subscribe_events + MQTT mirror).
 - [ ] UI Angular (incl. dashboard configurazione LLM).

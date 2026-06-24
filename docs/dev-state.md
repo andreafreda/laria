@@ -94,7 +94,13 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_modules_finance.py`: 3 test (tool registrati, add_transaction via Engine+FakeProvider persiste sul DB, get_balances dispatch). Totale 41 verdi.
 - Engine ora opera davvero su finance end-to-end (config→llm→engine→registry→storage).
 
-## Prossimo: food/utilities come tool + canali/web API
+## FATTO — moduli food + utilities come tool
+- `modules/food.py`: `register_food_tools` (10 tool): log_meal, get_day_totals, log_weight, log_hydration, add_shopping_items, get_shopping_list, check_shopping_item, add_pantry_items, get_pantry, pantry_expiring. `member` esplicito (diverso da user_id).
+- `modules/utilities.py`: `register_utilities_tools` (3 tool): record_bill, record_bill_range, get_bill_year (ritorna i 12 valori mensili).
+- `tests/test_modules_food_utilities.py`: 5 test (dispatch diretto su registry). Totale 46 verdi.
+- Restano moduli logici: nutrition lookup (OFF/USDA), econ_import parser (estratti banca).
+
+## Prossimo: canali/web API (REST/WS), poi connector-ha, UI, Docker
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
