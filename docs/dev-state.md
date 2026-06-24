@@ -3,7 +3,7 @@
 > Doc interno (IT). Insieme a `plan.md` è la **fonte di verità**. Se la sessione si
 > compatta, leggere QUESTO per riprendere col dettaglio tecnico. Aggiornare a ogni step.
 
-Ultimo aggiornamento: port storage finance+food+utilities (`core/laria/storage/`), 27 test verdi.
+Ultimo aggiornamento: storage port COMPLETO (finance+food+utilities+conversations+misc), 33 test verdi.
 
 ## Coordinate
 - Repo LARIA: `C:\projects\laria` → github.com/andreafreda/laria (branch `main`).
@@ -60,7 +60,22 @@ docs/         plan.md (piano+tracker), dev-state.md (questo)
 - **FATTO food** `storage/food.py` (port `memory/food.py`): diet_profiles, weight_log, meals+meal_items (macro+micro denormalizzati), meal_plan, hydration_log, shopping_items, pantry_items, food_cache (TTL 90gg). Commenti EN, `member` free-text (no membri hardcoded). Schema `_FOOD_SCHEMA` in db.py.
 - **FATTO utilities** `storage/utilities.py` (port `memory/bollette.py`): `utility_bills` (utility/metric/year/month/value). bolletta→bill: set_bill/set_bill_range/get_bill_csv/get_bill_existing_range/get_bill_years/bills_empty/seed_bills. Schema `_UTILITIES_SCHEMA`.
 - `tests/test_food.py`: 8 test (profili, pasti+day_totals, peso, spesa+dispensa, piano, idratazione, bollette+range). Totale 27 verdi.
-- **Prossimo storage**: conversation-store (history/notes/summary/FTS da `memory/core.py`) — decidere se in storage o lato MemoryBackend; misc (`memory/misc.py`: reminders/briefings/news/error_log). Poi: port engine provider-agnostic (`claude_engine.py`).
+- **FATTO conversations** `storage/conversations.py` (port parti chat di `memory/core.py`): `conversations` (turni raw), `conv_summary` (summary rolling), `notes` (key/value). Costanti MAX_HISTORY=10, SUMMARY_BATCH=20. **Decisione**: conversation-store = trascritto raw che l'engine ripropone; DISTINTO dalla memoria semantica (`laria.memory.MemoryBackend`). FTS `search_memory` HARIA NON portata → recall keyword/semantico ora è del MemoryBackend.
+- **FATTO misc** `storage/misc.py` (port `memory/misc.py`): reminders, briefings, news_blocklist, error_log (retention 500).
+- **NON portati da `memory/core.py`** (di proposito): `entity_cache` + `mqtt_topics` → concern del **connector-ha** (HA-specifici), andranno lì. Migrazioni one-shot `ha_chat_`/`deactivate_generic_conti` = cruft HARIA, droppate.
+- `tests/test_conversations_misc.py`: 6 test. Totale 33 verdi.
+
+## STORAGE PORT COMPLETO ✅
+Tutti i domini dati portati, tradotti EN, de-personalizzati, settings-driven, testati (33 verdi):
+finance, food, utilities, conversations, misc. Schema unico in `db.py:init_db()`.
+
+## Prossimo grande step: ENGINE provider-agnostic
+Port `haria/app/claude_engine.py` → `core/laria/engine.py`:
+- sostituire `client.messages.create(...)` con `provider.generate(...)` (già pronto: `laria.llm.get_provider`).
+- tool definitions + system prompt + loop tool-use già robusti in HARIA (round bugfix). Tradurre prompt IT→EN (`prompts.py`).
+- l'engine consuma: `laria.storage.*` (dati), `laria.memory.MemoryBackend` (recall/write semantico), `laria.llm` (LLM). Conversation history da `storage.conversations`.
+- tradurre i tool (nomi/descrizioni IT→EN) — sono l'interfaccia che l'LLM vede.
+Dipendenze a valle dopo engine: channels/web API, connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
 
 ## Mappa sorgente HARIA → destinazione LARIA (per i prossimi port)
 HARIA `haria/app/`:

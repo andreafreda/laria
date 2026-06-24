@@ -51,6 +51,8 @@ async def init_db() -> None:
         await db.executescript(_FINANCE_SCHEMA)
         await db.executescript(_FOOD_SCHEMA)
         await db.executescript(_UTILITIES_SCHEMA)
+        await db.executescript(_CONVERSATION_SCHEMA)
+        await db.executescript(_MISC_SCHEMA)
 
         # Seed generic default categories (idempotent, no personal data).
         for cat in DEFAULT_CATEGORIES:
@@ -229,5 +231,67 @@ CREATE TABLE IF NOT EXISTS utility_bills (
     value REAL NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (utility, metric, year, month)
+);
+"""
+
+# Raw conversation persistence (recent turns + rolling summary + key/value
+# notes). This is NOT the semantic memory (that is laria.memory.MemoryBackend);
+# it's the chat transcript the engine replays each turn.
+_CONVERSATION_SCHEMA = """
+CREATE TABLE IF NOT EXISTS conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS conv_summary (
+    user_id TEXT PRIMARY KEY,
+    summary TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, key)
+);
+"""
+
+# Reminders, news briefings, news blocklist, error log.
+_MISC_SCHEMA = """
+CREATE TABLE IF NOT EXISTS reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    message TEXT NOT NULL,
+    remind_at DATETIME,
+    recurring TEXT,
+    active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS briefings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    topics TEXT NOT NULL,
+    cron TEXT NOT NULL,
+    num_news INTEGER DEFAULT 5,
+    active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS news_blocklist (
+    user_id TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, domain)
+);
+CREATE TABLE IF NOT EXISTS error_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts DATETIME DEFAULT CURRENT_TIMESTAMP,
+    source TEXT,
+    level TEXT,
+    message TEXT NOT NULL,
+    traceback TEXT
 );
 """

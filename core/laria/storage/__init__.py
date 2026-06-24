@@ -6,7 +6,7 @@ tables follow.
 """
 from __future__ import annotations
 
-from . import finance, food, utilities
+from . import conversations, finance, food, misc, utilities
 from .db import (
     CATEGORY_TRANSFER,
     DEFAULT_CATEGORIES,
@@ -19,6 +19,8 @@ __all__ = [
     "finance",
     "food",
     "utilities",
+    "conversations",
+    "misc",
     "init_db",
     "connect",
     "db_path",
