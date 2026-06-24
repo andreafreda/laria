@@ -14,17 +14,19 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 ## Stato avanzamento (aggiornare sempre)
 - [x] Repo + scheletro monorepo (core/ connector-ha/ ui/ docker/ docs/), licenza PolyForm Noncommercial.
 - [x] README standalone-first (EN), .gitignore (segreti esclusi), .env.example.
-- [x] Core bootstrap: `laria.config` (env, no Supervisor) + `laria.llm` (provider astratto + Anthropic + registry) + test.
+- [x] Core bootstrap: `laria.config` (env, no Supervisor) + `laria.llm` (provider astratto + registry) + test.
+- [x] **LLM multi-provider**: Anthropic + OpenAI-compatible (openai/ollama/lm-studio/vllm), conversione formato in funzioni pure testate.
 - [x] **Memory wrapper** `core/laria/memory/`: `MemoryBackend` astratto + `FakeBackend` + `Mem0Backend` + `Embedder` + registry (mem0 plug&play).
 - [x] **Port storage COMPLETO** `core/laria/storage/` de-personalizzato, EN, settings-driven: finance, food, utilities, conversations, misc (33 test verdi).
 - [x] **Engine agentico provider-agnostic** `core/laria/engine/`: loop tool-use su `provider.generate`, ToolRegistry pluggable, core-tool memory/recall/respond, prompt EN, summary rolling (38 test verdi).
 - [~] Moduli dominio come tool registrabili: **finance + food + utilities fatti** (`modules/`, 21 tool). Restano: nutrition lookup, econ_import parser.
 - [x] **Convenzione codice**: skill `/codecraft` (repo `.claude/skills/`, globale, pubblicata su `andreafreda/skills`) project-agnostic: leggibilità umana, SOLID con giudizio, no code smell, docstring human-oriented, niente trattini come punteggiatura in prosa.
-- [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite attuale: **46 test verdi**.
+- [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite a quel punto: 46 test verdi (ora 65).
 - [~] Canali: **web API JSON fatta** (`core/laria/app.py` composition root + `core/laria/web/`: POST /api/chat, GET /health, `python -m laria.web`). Restano: WebSocket streaming, Telegram astratto.
 - [~] connector-ha: **client REST/WS + tool HA fatti** (`core/laria/connectors/ha/`: HaClient con DI, tool get_house_state/control_device/speak_alexa, registrati dal composition root solo se HA_ENABLED). Restano: subscribe_events, MQTT mirror, calendar tools.
 - [ ] UI Angular (incl. dashboard configurazione LLM).
 - [~] Docker: **immagine core fatta** (`docker/Dockerfile` python-slim non-root + healthcheck, `docker/compose.yaml` con volume dati, `.dockerignore`; `python -m laria.web`). Build non ancora verificata in locale (Docker Desktop engine spento). Resta: immagine combinata con UI.
+- [x] **Consolidamento backend**: CI GitHub Actions (pytest 3.11/3.12 offline), `.env.example` completo, smoke test composition root, README quickstart. **Suite attuale: 65 test verdi**.
 - [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).
 - [ ] **Memoria agente**: fase 1 = **mem0 dietro wrapper nostro `MemoryBackend`** (plug&play); improvement = motore proprio L0-L3 dopo. Vedi `design-memory.md` §6bis + `memory-engine-handoff.md`.
 
