@@ -77,6 +77,8 @@ real seam) exists — YAGNI wins ties.
 - Duplicated SQL/string building repeated many times → name it once (only if it
   genuinely clarifies).
 - A function that needs section comments inside it — it wants splitting.
+- A file carrying section banners (`# ---- accounts ----`, `# ---- reports ----`)
+  is usually several modules in a trench coat — each banner is a candidate split.
 - Inconsistent param/return shapes across sibling functions.
 
 ### Classic code smells (avoid)
@@ -93,6 +95,17 @@ real seam) exists — YAGNI wins ties.
   flatten.
 - **Boolean trap** → a call like `f(true, false)` whose flags are unreadable at
   the call site; prefer named args or distinct functions.
+
+## When refactoring
+
+- **Keep the public API stable.** When you split a module, re-export the same
+  names from a facade (package `__init__`) so callers don't have to change. A
+  readability refactor should cost the rest of the codebase nothing.
+- **Lean on the tests.** Run them before and after; green with *no test edits* is
+  the proof the behaviour and the interface are unchanged. If a refactor forces
+  test changes, it's a behaviour change — call it out, don't bury it.
+- **One kind of change at a time.** Don't mix "move code" with "change logic" in
+  one commit; reviewers can't tell a pure move from a silent fix otherwise.
 
 ## Check before committing
 
