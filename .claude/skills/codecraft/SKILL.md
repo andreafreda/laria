@@ -16,6 +16,20 @@ understanding it at a glance, not for cleverness or line count. These rules are
 project-agnostic; the examples happen to come from the project where this skill
 was born (LARIA), but apply them anywhere.
 
+## Not in scope
+
+This skill is about how code reads, not what it does. It does not cover:
+
+- **Performance or optimization** (profiling, complexity, caching strategy). Use
+  a performance pass for that; do not trade clarity for speed under this skill.
+- **Security review** (auth, injection, secrets, crypto). Use a dedicated
+  security review.
+- **Functional correctness or architecture decisions** (is the feature right,
+  which design to pick). Those come first; readability polishes the result.
+
+When a task is really about one of those, do that work; reach for codecraft when
+the goal is making code clear and maintainable.
+
 ## Principles
 
 1. **Obvious over clever.** Prefer the plain solution a competent engineer would
@@ -38,8 +52,11 @@ was born (LARIA), but apply them anywhere.
 7. **Length is fine; density is not.** A long file of short, obvious functions is
    good. A short file of dense, multi-purpose functions is not. Split by concept
    when a file mixes unrelated concerns, not to hit a line count.
-8. **Type hints and docstrings** on public functions: the signature and one line
-   of intent should tell the reader how to use it without reading the body.
+8. **Types and docstrings** on public functions: the signature and one line of
+   intent should tell the reader how to use it without reading the body. Use the
+   language's own type system (Python type hints, TypeScript types, C# types,
+   typed signatures in Go, and so on); the principle is "make the contract
+   visible in the signature", not any one language's syntax.
 9. **Document every main method, human-first.** Every public or important
    function, class and module gets a docstring written for a person: say plainly
    what it is for and when you would reach for it (the intent and the role it
@@ -63,6 +80,46 @@ was born (LARIA), but apply them anywhere.
     comma, a colon, parentheses, or a full stop instead. Hyphens inside compound
     words are fine (`case-insensitive`, `multi-step`, `read-only`). Avoid arrow
     glyphs in prose too; write "becomes" or use a colon.
+
+## Examples (before and after)
+
+Concrete calibration. The language is Python, but the moves are universal: apply
+the same idea with each language's idioms.
+
+Naming and magic numbers (principle 2):
+
+```python
+# before: the name and the literal hide the intent
+def calc(n, b):
+    return n + b * 0.22
+
+# after: the name states the job, the constant names the value
+TAX_RATE = 0.22
+def gross_with_tax(net: float, taxable_base: float) -> float:
+    return net + taxable_base * TAX_RATE
+```
+
+Nesting and guard clauses (principle 4):
+
+```python
+# before: the happy path is buried three levels deep
+def withdraw(account, amount):
+    if account is not None:
+        if account.active:
+            if amount <= account.balance:
+                account.balance -= amount
+                return True
+    return False
+
+# after: reject the edge cases first, then the happy path reads straight
+def withdraw(account, amount):
+    if account is None or not account.active:
+        return False
+    if amount > account.balance:
+        return False
+    account.balance -= amount
+    return True
+```
 
 ## SOLID (apply with judgement, never at the cost of clarity)
 
