@@ -158,8 +158,7 @@ con schema dati e API di memoria (write/recall/forget). Da fare prima/insieme al
   License: uso non-produttivo libero, produzione richiede licenza) o **PolyForm Noncommercial/Commercial**.
   Conseguenza: igiene segreti obbligatoria dal commit 1 (niente token nel repo, `.env`/secret manager).
 - **Layout:** **monorepo** (core + connettore-HA + UI Angular + docker in cartelle/packages).
-- **LLM:** layer provider **universale**, ma **fase 1 = solo Anthropic funzionante end-to-end**.
-  Ollama primo target locale subito dopo (endpoint OpenAI-compatible → copre anche LM Studio/llama.cpp/vLLM).
+- **LLM:** layer provider **universale**. Anthropic + **OpenAI-compatible fatto** (`openai`/`ollama`/`openai-compatible`, copre OpenAI/Ollama/LM Studio/vLLM). Selezione via `LLM_PROVIDER`.
 
 ## Nome scelto: **LARIA**
 - **L**ocal **A**ssistant **R**eactive **I**ntelligent **A**gent (HARIA: Home→Local, coerente col disaccoppiamento da HA).

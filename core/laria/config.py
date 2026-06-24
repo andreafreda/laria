@@ -36,6 +36,7 @@ class LLMSettings:
     # Per-provider credentials / endpoints (only the active provider's are required).
     anthropic_api_key: str = field(default_factory=lambda: _env("ANTHROPIC_API_KEY"))
     openai_api_key: str = field(default_factory=lambda: _env("OPENAI_API_KEY"))
+    openai_base_url: str = field(default_factory=lambda: _env("OPENAI_BASE_URL", "https://api.openai.com/v1"))
     ollama_base_url: str = field(default_factory=lambda: _env("OLLAMA_BASE_URL", "http://localhost:11434"))
 
 

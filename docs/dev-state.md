@@ -122,6 +122,13 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_connector_ha.py`: 6 test con StubHaClient (registrazione, discovery, stato specifico, control_device, speak_alexa, HA irraggiungibile→messaggio). Totale 57 verdi.
 - NON ancora portati da HARIA: subscribe_events (WS push), MQTT mirror (mqtt_pub/mqtt_topics), calendar tools, entity_cache su DB (token-opt).
 
+## FATTO — secondo provider LLM (OpenAI-compatible)
+- `llm/openai_provider.py`: `OpenAICompatibleProvider` (base_url/api_key/model). Copre OpenAI, Ollama, LM Studio, vLLM (tutti parlano Chat Completions). Conversione formato neutro↔OpenAI in funzioni PURE testabili: `to_openai_messages` (tool_use→tool_calls, tool_result→role:tool), `to_openai_tools`, `to_openai_tool_choice` (any→required, tool→named), `parse_response` (tool_calls.arguments JSON→dict, malformato→{}). HTTP via aiohttp (no nuova dep). `supports_prompt_cache=False`.
+- `registry.py`: `LLM_PROVIDER` ∈ {anthropic, openai, openai-compatible, ollama}. ollama→base `OLLAMA_BASE_URL/v1` key vuota; openai→`OPENAI_BASE_URL` (default api.openai.com/v1).
+- `config.py`: aggiunto `openai_base_url`.
+- `tests/test_openai_provider.py`: 5 test (conversione messaggi/tool/tool_choice, parse, selezione registry ollama+openai). Totale 62 verdi.
+- Astrazione provider provata con 2 implementazioni reali; engine invariato.
+
 ## Prossimo: UI Angular, WebSocket streaming, Telegram, MQTT mirror, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
