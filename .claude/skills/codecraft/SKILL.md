@@ -1,15 +1,15 @@
 ---
-name: simplecode
+name: codecraft
 description: >-
   Write code the way a thoughtful human engineer would — plain, obvious, and easy
   to follow — not machine-dense or over-abstracted. A founding premise of LARIA.
   Use whenever writing or refactoring LARIA code (any file under core/,
   connector-ha/, ui/), reviewing a diff for readability, or when the user mentions
   readability, simplicity, "clean code", "as if written by hand", or invokes
-  /simplecode.
+  /codecraft.
 ---
 
-# simplecode
+# codecraft
 
 Founding premise of LARIA: the code must read as if a careful human wrote it.
 Not necessarily short — **clear**. Optimize for the next person (or the next
