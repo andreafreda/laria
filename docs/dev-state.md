@@ -140,7 +140,7 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `services/nutrition.py`: port di `nutrition.py`. Parser PURI `parse_off_nutriments`/`parse_usda_food` + `lookup_food`/`lookup_barcode` (cache `storage.food` → OFF → USDA). Network best-effort: errore→None (mai rompe il log pasto). USDA key da `settings.usda_api_key` (env USDA_API_KEY, default DEMO_KEY).
 - Tool nuovo `lookup_nutrition(query)` nel modulo food (22 tool totali).
 - `tests/test_ingest_bank_statements.py` (6) + `tests/test_nutrition.py` (4, parser puri + cache-hit no-rete). Totale 74 verdi.
-- Resta: endpoint web upload che chiama `bank_statements.parse` + `finance.import_transactions` (il parser prende bytes/righe, non è un tool LLM).
+- FATTO endpoint upload: `POST /api/finance/import` (multipart: account + file) → `rows_from_file` → `parse` → `finance.import_transactions`. Errori client→400 (no multipart, campi mancanti, account sconosciuto, formato non riconosciuto, xlsx senza openpyxl). `tests/test_web_import.py`: 5 test (csv import, idempotenza, account ignoto, formato ignoto, file mancante). Totale 79 verdi.
 
 ## Prossimo: UI Angular, WebSocket streaming, Telegram, MQTT mirror, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
