@@ -250,7 +250,17 @@ qualità recall (semantico+temporale) · costo/latenza · **locale/privacy** · 
 (meno servizi = meglio) · trasparenza/ispezionabilità · portabilità del dato · determinismo
 (controllo su cosa ricorda/dimentica) · maturità/licenza.
 
-## 6. Direzione provvisoria (NON vincolante)
+## 6bis. DECISIONE fase 1 (presa)
+**Backend di partenza: mem0**, MA **dietro un wrapper nostro** (`MemoryBackend`) →
+cambio motore **plug & play**. mem0 dà recall semantico + estrazione/update fatti subito
+(Apache-2.0, Python, locale). L'engine LARIA parla SOLO al nostro `MemoryBackend`, mai a mem0
+direttamente. **Improvement successivo**: motore nostro (L0-L3 su sqlite-vec) come backend
+alternativo, attivabile senza toccare l'engine. Niente lock-in.
+
+Implementazione: `core/laria/memory/` con `MemoryBackend` (interfaccia), `Mem0Backend` (wrapper),
+`Embedder` astratto. Test con backend fake (no rete).
+
+## 6. Direzione provvisoria (storica, NON vincolante)
 Forte candidato: **ibrido locale "wiki della vita" + fatti vettoriali** —
 file Markdown curati (ispezionabili, versionabili) **+** SQLite/sqlite-vec per recall ibrido,
 dietro `MemoryBackend`, con `Embedder` locale di default. Tiene la porta aperta a mem0/Letta

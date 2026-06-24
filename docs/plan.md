@@ -23,7 +23,7 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [ ] UI Angular (incl. dashboard configurazione LLM).
 - [ ] Docker (Dockerfile multi-stage + compose).
 - [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).
-- [ ] **Reingegnerizzare la memoria persistente dell'agente** (vedi sezione dedicata).
+- [ ] **Memoria agente**: fase 1 = **mem0 dietro wrapper nostro `MemoryBackend`** (plug&play); improvement = motore proprio L0-L3 dopo. Vedi `design-memory.md` §6bis + `memory-engine-handoff.md`.
 
 ## Lingua
 - Codice, README, commenti, commit, **nomi di dominio/moduli**: **inglese**.
