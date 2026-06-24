@@ -3,7 +3,7 @@
 > Doc interno (IT). Insieme a `plan.md` è la **fonte di verità**. Se la sessione si
 > compatta, leggere QUESTO per riprendere col dettaglio tecnico. Aggiornare a ogni step.
 
-Ultimo aggiornamento: bootstrap core (config + LLM layer).
+Ultimo aggiornamento: scaffold memory wrapper (`core/laria/memory/`), 10 test verdi.
 
 ## Coordinate
 - Repo LARIA: `C:\projects\laria` → github.com/andreafreda/laria (branch `main`).
@@ -71,7 +71,16 @@ HARIA `haria/app/`:
 - Backend di partenza: **mem0** (Apache-2.0, Python, locale) **dietro wrapper nostro `MemoryBackend`** → cambio motore plug & play. L'engine parla solo al wrapper.
 - Improvement dopo: motore proprio **L0-L3** (modello TencentDB/OpenHuman) su **sqlite-vec+FTS5**, come backend alternativo.
 - Analisi completa: `design-memory.md` (architetture A-G, sistemi mercato pro/cons, storage §3c, ingestione/sharing da Mirage §3d, decisione §6bis). Handoff per sessione dedicata: `memory-engine-handoff.md`.
-- **Prossimo concreto memoria**: scaffold `core/laria/memory/` → `MemoryBackend` (interfaccia), `Embedder` (astratto, locale default), `Mem0Backend` (wrapper), `FakeBackend` (test no-rete).
+- **FATTO — scaffold wrapper** `core/laria/memory/`:
+  - `types.py`: `Scope(household,user_id)` + `MemoryItem` (text/source/confidence/created_at/updated_at/metadata/score).
+  - `base.py`: ABC `MemoryBackend` — write/recall/get/update/delete/forget. Unica dipendenza dell'engine.
+  - `embedder.py`: ABC `Embedder` (default locale, fake nei test).
+  - `fake.py`: `FakeBackend` in-memory (recall = overlap keyword), **scope isolation** (privati non emergono in scope altrui). Default per test/dev.
+  - `mem0_backend.py`: `Mem0Backend` wrapper, import mem0 lazy (dep opzionale); Scope→`user_id` via `Scope.key()`.
+  - `registry.py`: `get_memory_backend(settings)` → 'fake' | 'mem0'.
+  - `config.py`: aggiunto `MemorySettings` (backend/embedder/embedder_model/store_path), default backend='fake'.
+  - Test: `tests/test_memory.py` (registry default, write/recall, CRUD, scope isolation, forget). 10 test verdi totali.
+- **Prossimo memoria**: (a) embedder locale reale (sentence-transformers/Ollama) + `LocalHybridBackend` sqlite-vec quando serve; (b) integrare `MemoryBackend` nell'engine quando si porta `claude_engine`.
 
 ## Note operative
 - Skill `/handoff` (mattpocock) installata in `~/.claude/skills/handoff` ma NON ancora caricata dal harness in questa sessione (manca dalla lista). Riprovare dopo reload completo; per ora usare `memory-engine-handoff.md`.

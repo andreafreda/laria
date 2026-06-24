@@ -40,6 +40,18 @@ class LLMSettings:
 
 
 @dataclass(frozen=True)
+class MemorySettings:
+    """Agent memory configuration. The engine talks only to our MemoryBackend
+    wrapper; the concrete backend (phase 1: mem0) is swappable here."""
+    backend: str = field(default_factory=lambda: _env("MEMORY_BACKEND", "fake"))
+    # Embedder: local-first by default; cloud optional.
+    embedder: str = field(default_factory=lambda: _env("MEMORY_EMBEDDER", "fake"))
+    embedder_model: str = field(default_factory=lambda: _env("MEMORY_EMBEDDER_MODEL", ""))
+    # Where the backend persists (mem0 / future local hybrid store).
+    store_path: str = field(default_factory=lambda: _env("MEMORY_STORE_PATH", "./data/memory"))
+
+
+@dataclass(frozen=True)
 class HASettings:
     """Optional Home Assistant integration. Disabled by default — the core
     runs fully without it."""
@@ -61,6 +73,7 @@ class Settings:
     web_host: str = field(default_factory=lambda: _env("WEB_HOST", "0.0.0.0"))
     web_port: int = field(default_factory=lambda: _env_int("WEB_PORT", 8080))
     llm: LLMSettings = field(default_factory=LLMSettings)
+    memory: MemorySettings = field(default_factory=MemorySettings)
     ha: HASettings = field(default_factory=HASettings)
 
 
