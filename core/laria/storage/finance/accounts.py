@@ -7,6 +7,8 @@ is never silently lost, deactivate them instead.
 """
 from __future__ import annotations
 
+import aiosqlite
+
 from ..db import build_set_clause, connect
 
 
@@ -89,7 +91,7 @@ async def update_account(name: str, *, new_name: str | None = None,
             cur = await conn.execute(
                 f"UPDATE finance_accounts SET {clause} WHERE name=?", params
             )
-        except Exception:  # IntegrityError: new_name already taken (UNIQUE)
+        except aiosqlite.IntegrityError:  # new_name already taken (UNIQUE)
             return False
         await conn.commit()
         return cur.rowcount > 0
