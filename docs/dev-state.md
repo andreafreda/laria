@@ -142,7 +142,13 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_ingest_bank_statements.py` (6) + `tests/test_nutrition.py` (4, parser puri + cache-hit no-rete). Totale 74 verdi.
 - FATTO endpoint upload: `POST /api/finance/import` (multipart: account + file) → `rows_from_file` → `parse` → `finance.import_transactions`. Errori client→400 (no multipart, campi mancanti, account sconosciuto, formato non riconosciuto, xlsx senza openpyxl). `tests/test_web_import.py`: 5 test (csv import, idempotenza, account ignoto, formato ignoto, file mancante). Totale 79 verdi.
 
-## Prossimo: UI Angular, WebSocket streaming, Telegram, MQTT mirror, immagine combinata UI
+## FATTO — canale Telegram
+- `channels/telegram.py`: `TelegramClient` (Bot API via aiohttp, no nuova dep: get_updates long-poll + send_message), `handle_update` (logica pura testabile: text→engine.chat keyed su chat_id→reply), `run` (loop poll con offset), `serve`/`__main__` (`python -m laria.channels.telegram`).
+- IO separato dalla logica: `handle_update(update, engine, client)` testato con stub.
+- `tests/test_channel_telegram.py`: 3 test (text→chat+reply, update non-message ignorato, testo vuoto ignorato). Totale 82 verdi.
+- 2 canali ora sullo stesso engine (web + telegram), entrambi via `build_engine`.
+
+## Prossimo: UI Angular, WebSocket streaming, MQTT mirror, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
