@@ -13,8 +13,7 @@ description: >-
 The premise: code must read as if a careful human wrote it. Not necessarily
 short, but clear. Optimize for the next person (or the next session)
 understanding it at a glance, not for cleverness or line count. These rules are
-project-agnostic; the examples happen to come from the project where this skill
-was born (LARIA), but apply them anywhere.
+project-agnostic; apply them in any codebase and language.
 
 ## Not in scope
 
@@ -74,12 +73,14 @@ the goal is making code clear and maintainable.
     functions are trivial to read and test; push the IO into thin wrappers around
     them. A function that both computes and persists is harder to reason about
     than two that each do one thing.
-12. **No dashes as sentence punctuation in prose.** In docstrings, comments,
-    commit messages, READMEs and any written text, do not join clauses with a
-    dash, neither an em dash nor a spaced hyphen like `word - word - word`. Use a
-    comma, a colon, parentheses, or a full stop instead. Hyphens inside compound
-    words are fine (`case-insensitive`, `multi-step`, `read-only`). Avoid arrow
-    glyphs in prose too; write "becomes" or use a colon.
+12. **Write prose like a human, not like a model.** In docstrings, comments,
+    commit messages and READMEs, avoid the dash as a clause connector, both the
+    em dash and the spaced hyphen like `word - word - word`. Models lean on it
+    far more than people do, so it reads as a tell of generated text; natural
+    punctuation reads more human. Use a comma, a colon, parentheses, or a full
+    stop instead. Hyphens inside compound words are fine (`case-insensitive`,
+    `multi-step`, `read-only`). Avoid arrow glyphs in prose too; write "becomes"
+    or use a colon.
 
 ## Examples (before and after)
 
@@ -175,13 +176,14 @@ real seam) exists. YAGNI wins ties.
 ### Mechanical duplication with a varying core
 
 A common shape: the same boilerplate repeated across many functions, where only a
-small inner part differs. (In LARIA, the "update only the fields the caller
-passed" CRUD functions: collecting the set fields, building the SQL `SET` clause
-and running it is identical; only the per-field coercion differs.) Resolve it
-without hiding the part that varies: keep the varying logic explicit in each
-caller, and extract only the identical mechanical half into one small named
-helper. The helper names the concept, the callers stay readable, and no magic is
-introduced. Skip the helper when there is only one such function (YAGNI).
+small inner part differs. A classic example is a set of "update only the fields
+the caller passed" functions, where collecting the set fields, building the
+update statement and running it is identical and only the per-field handling
+differs. Resolve it without hiding the part that varies: keep the varying logic
+explicit in each caller, and extract only the identical mechanical half into one
+small named helper. The helper names the concept, the callers stay readable, and
+no magic is introduced. Skip the helper when there is only one such function
+(YAGNI).
 
 ## When refactoring
 
