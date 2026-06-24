@@ -1,4 +1,4 @@
-"""Weight log — timestamped weight (and BMI) measurements per member.
+"""Weight log, timestamped weight (and BMI) measurements per member.
 
 A simple append-only log; ``get_weight_stats`` turns it into the trend numbers a
 dashboard shows (latest, min, max, change over a window).
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from ..db import connect
+from ..db import build_set_clause, connect
 
 
 async def add_weight(member: str, weight_kg: float, bmi: float | None) -> dict:
@@ -37,19 +37,12 @@ async def get_weight_history(member: str, limit: int = 20) -> list[dict]:
 async def update_weight(weight_id: int, weight_kg: float | None = None,
                         bmi: float | None = None) -> bool:
     """Correct a logged measurement by id. Returns False if nothing changed."""
-    assignments: list[str] = []
-    values: list = []
-    if weight_kg is not None:
-        assignments.append("weight_kg = ?"); values.append(weight_kg)
-    if bmi is not None:
-        assignments.append("bmi = ?"); values.append(bmi)
-    if not assignments:
+    clause, params = build_set_clause({"weight_kg": weight_kg, "bmi": bmi})
+    if not clause:
         return False
-    values.append(int(weight_id))
+    params.append(int(weight_id))
     async with connect() as db:
-        cur = await db.execute(
-            f"UPDATE weight_log SET {', '.join(assignments)} WHERE id = ?", values
-        )
+        cur = await db.execute(f"UPDATE weight_log SET {clause} WHERE id = ?", params)
         await db.commit()
         return cur.rowcount > 0
 

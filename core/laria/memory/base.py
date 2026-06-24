@@ -1,4 +1,4 @@
-"""MemoryBackend — the public memory API the engine depends on.
+"""MemoryBackend, the public memory API the engine depends on.
 
 This is the seam that makes the memory engine plug & play: the agent calls only
 these methods. Phase 1 the concrete backend is mem0 (see ``mem0_backend``); a

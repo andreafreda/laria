@@ -1,7 +1,7 @@
 """Built-in, connector-independent tools: explicit notes + semantic recall.
 
 HA-specific tools (house state, device control, Alexa) are intentionally NOT
-here — they live in the HA connector and register themselves when enabled.
+here, they live in the HA connector and register themselves when enabled.
 ``respond`` is handled by the engine loop itself, not dispatched here.
 """
 from __future__ import annotations

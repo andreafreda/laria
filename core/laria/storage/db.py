@@ -12,6 +12,7 @@ ported.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import aiosqlite
 
@@ -35,6 +36,21 @@ def db_path() -> str:
 def connect() -> aiosqlite.Connection:
     """Open a connection to the configured DB (caller manages the context)."""
     return aiosqlite.connect(db_path())
+
+
+def build_set_clause(changes: dict[str, Any]) -> tuple[str, list]:
+    """Turn a {column: value} dict into a SQL "col=?, col=?" clause and its params.
+
+    This is the mechanical half shared by every "update only the fields the
+    caller passed" function. Pairs whose value is None are dropped, so a caller
+    can list every optional field and let the unset ones fall away. Returns
+    ("", []) when nothing remains, which callers read as "no update to make".
+    Coercion (float, strip, bool to 0/1, name to id) stays in the caller, so the
+    helper never hides what is happening to the data.
+    """
+    present = {column: value for column, value in changes.items() if value is not None}
+    clause = ", ".join(f"{column}=?" for column in present)
+    return clause, list(present.values())
 
 
 async def init_db() -> None:

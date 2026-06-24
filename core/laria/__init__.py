@@ -1,4 +1,4 @@
-"""LARIA core — provider-agnostic agentic engine, modules and storage.
+"""LARIA core, provider-agnostic agentic engine, modules and storage.
 
 The core runs standalone (no Home Assistant). Configuration comes from the
 environment (see ``laria.config``); LLM access goes through the provider

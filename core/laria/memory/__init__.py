@@ -1,4 +1,4 @@
-"""Agent memory — vendor-neutral interface + swappable backends.
+"""Agent memory, vendor-neutral interface + swappable backends.
 
 Engine imports from here only:
     from laria.memory import MemoryBackend, MemoryItem, Scope, get_memory_backend

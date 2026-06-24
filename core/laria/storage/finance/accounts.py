@@ -1,13 +1,13 @@
-"""Bank accounts, cards, wallets — the places money sits.
+"""Bank accounts, cards, wallets, the places money sits.
 
 An account holds an opening balance; its live balance is that opening figure
 plus every transaction booked against it (see ``transactions.get_balance``).
 Accounts are never auto-deleted while they still have transactions, so history
-is never silently lost — deactivate them instead.
+is never silently lost, deactivate them instead.
 """
 from __future__ import annotations
 
-from ..db import connect
+from ..db import build_set_clause, connect
 
 
 def _account_dict(row) -> dict:
@@ -67,31 +67,27 @@ async def update_account(name: str, *, new_name: str | None = None,
                          type: str | None = None, owner: str | None = None,
                          opening_balance: float | None = None,
                          active: bool | None = None) -> bool:
-    """Change only the fields you pass; leave the rest untouched.
+    """Change only the fields you pass and leave the rest untouched.
 
     Returns False if the account doesn't exist or if ``new_name`` would collide
     with another account.
     """
-    changes: list[str] = []
-    values: list = []
-    if new_name is not None:
-        changes.append("name=?"); values.append(new_name.strip())
-    if type is not None:
-        changes.append("type=?"); values.append(type)
-    if owner is not None:
-        changes.append("owner=?"); values.append(owner)
-    if opening_balance is not None:
-        changes.append("opening_balance=?"); values.append(float(opening_balance))
-    if active is not None:
-        changes.append("active=?"); values.append(1 if active else 0)
-    if not changes:
+    changes = {
+        "name": new_name.strip() if new_name is not None else None,
+        "type": type,
+        "owner": owner,
+        "opening_balance": float(opening_balance) if opening_balance is not None else None,
+        "active": (1 if active else 0) if active is not None else None,
+    }
+    clause, params = build_set_clause(changes)
+    if not clause:
         return False
 
-    values.append(name)
+    params.append(name)
     async with connect() as conn:
         try:
             cur = await conn.execute(
-                f"UPDATE finance_accounts SET {', '.join(changes)} WHERE name=?", values
+                f"UPDATE finance_accounts SET {clause} WHERE name=?", params
             )
         except Exception:  # IntegrityError: new_name already taken (UNIQUE)
             return False
@@ -103,7 +99,7 @@ async def delete_account(name: str) -> dict:
     """Delete an account, but only if it has no transactions.
 
     If transactions exist the account is kept and the result says so
-    (``in_use``) — deactivate it with ``update_account(active=False)`` to hide it
+    (``in_use``), deactivate it with ``update_account(active=False)`` to hide it
     without throwing away its history. Result shapes:
     ``{ok: True}`` / ``{ok: False, found: False}`` / ``{ok: False, in_use: True, transactions: N}``.
     """

@@ -1,4 +1,4 @@
-"""Spending categories — the labels every transaction is filed under.
+"""Spending categories, the labels every transaction is filed under.
 
 Categories are free-form: the app seeds a generic set, and users add, rename or
 merge them over time. One name is special: ``transfer`` marks money moving
@@ -11,7 +11,7 @@ from ..db import CATEGORY_TRANSFER, connect
 
 
 async def list_categories() -> list[str]:
-    """All category names, alphabetically — e.g. to populate a picker."""
+    """All category names, alphabetically, e.g. to populate a picker."""
     async with connect() as conn:
         cur = await conn.execute("SELECT name FROM finance_categories ORDER BY name")
         return [r[0] for r in await cur.fetchall()]
@@ -53,7 +53,7 @@ async def delete_category(name: str) -> dict:
     """Delete a category, but only when nothing depends on it.
 
     Refuses if the category is the protected ``transfer`` one, or if any
-    transaction or rule still uses it — move those first with rename/merge.
+    transaction or rule still uses it, move those first with rename/merge.
     Result shapes: ``{ok: True}`` / ``{ok: False, protected: True}`` /
     ``{ok: False, found: False}`` / ``{ok: False, in_use: True, transactions: N}`` /
     ``{ok: False, in_use_rules: True, rules: N}``.

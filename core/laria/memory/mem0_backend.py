@@ -1,4 +1,4 @@
-"""mem0 wrapper — phase-1 concrete backend behind MemoryBackend.
+"""mem0 wrapper, phase-1 concrete backend behind MemoryBackend.
 
 mem0 (Apache-2.0, local-capable) does fact extraction with ADD/UPDATE/DELETE/
 NOOP. We keep it strictly behind this wrapper so the engine never imports mem0
@@ -23,7 +23,7 @@ class Mem0Backend(MemoryBackend):
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         try:
             from mem0 import Memory  # type: ignore
-        except ImportError as exc:  # pragma: no cover - depends on optional dep
+        except ImportError as exc:  # pragma: no cover (optional dependency)
             raise RuntimeError(
                 "mem0 backend selected but 'mem0ai' is not installed. "
                 "Install it or set MEMORY_BACKEND=fake."

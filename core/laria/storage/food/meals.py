@@ -1,4 +1,4 @@
-"""Logged meals — what each member actually ate, with nutrition totals.
+"""Logged meals, what each member actually ate, with nutrition totals.
 
 A meal carries denormalized macro/micro totals plus its individual food items
 (``meal_items``), so a day's nutrition is one SUM. This module also answers the
@@ -6,7 +6,7 @@ A meal carries denormalized macro/micro totals plus its individual food items
 """
 from __future__ import annotations
 
-from ..db import connect
+from ..db import build_set_clause, connect
 
 
 async def add_meal(member: str, meal_type: str, description: str, totals: dict,
@@ -56,26 +56,25 @@ async def update_meal(meal_id: int, meal_type: str | None = None, description: s
                       totals: dict | None = None, eaten_at: str | None = None) -> bool:
     """Edit a logged meal, changing only the fields you pass.
 
-    Only the headline totals (kcal/protein/carbs/fat) are updatable here; the
+    Only the headline totals (kcal, protein, carbs, fat) are updatable here; the
     detailed item rows aren't rewritten. Returns False if nothing changed.
     """
-    assignments: list[str] = []
-    values: list = []
-    if meal_type is not None:
-        assignments.append("meal_type = ?"); values.append(meal_type)
-    if description is not None:
-        assignments.append("description = ?"); values.append(description)
-    if eaten_at is not None:
-        assignments.append("eaten_at = ?"); values.append(eaten_at)
-    if totals:
-        for column in ("kcal_total", "protein_g", "carbs_g", "fat_g"):
-            if totals.get(column) is not None:
-                assignments.append(f"{column} = ?"); values.append(totals[column])
-    if not assignments:
+    totals = totals or {}
+    changes = {
+        "meal_type": meal_type,
+        "description": description,
+        "eaten_at": eaten_at,
+        "kcal_total": totals.get("kcal_total"),
+        "protein_g": totals.get("protein_g"),
+        "carbs_g": totals.get("carbs_g"),
+        "fat_g": totals.get("fat_g"),
+    }
+    clause, params = build_set_clause(changes)
+    if not clause:
         return False
-    values.append(int(meal_id))
+    params.append(int(meal_id))
     async with connect() as db:
-        cur = await db.execute(f"UPDATE meals SET {', '.join(assignments)} WHERE id = ?", values)
+        cur = await db.execute(f"UPDATE meals SET {clause} WHERE id = ?", params)
         await db.commit()
         return cur.rowcount > 0
 
@@ -113,7 +112,7 @@ async def get_meals(member: str, date_from: str | None = None,
 async def get_logged_days(days_back: int = 30) -> list[dict]:
     """Recent days that have any logged meals, newest first.
 
-    Each entry is ``{day, members, meals, kcal}`` — handy for a "logging streak"
+    Each entry is ``{day, members, meals, kcal}``, handy for a "logging streak"
     or activity calendar over the last ``days_back`` days.
     """
     async with connect() as db:
@@ -160,7 +159,7 @@ async def get_day_totals(member: str, day: str) -> dict:
 
 
 async def export_meals(date_from: str, date_to: str) -> list[dict]:
-    """All members' meals in a date range, oldest first — for CSV export."""
+    """All members' meals in a date range, oldest first, for CSV export."""
     async with connect() as db:
         cur = await db.execute(
             """SELECT eaten_at, member, meal_type, description, kcal_total,

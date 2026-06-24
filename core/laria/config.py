@@ -53,7 +53,7 @@ class MemorySettings:
 
 @dataclass(frozen=True)
 class HASettings:
-    """Optional Home Assistant integration. Disabled by default — the core
+    """Optional Home Assistant integration. Disabled by default, the core
     runs fully without it."""
     enabled: bool = field(default_factory=lambda: _env_bool("HA_ENABLED", False))
     url: str = field(default_factory=lambda: _env("HA_URL", "http://homeassistant.local:8123"))

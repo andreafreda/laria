@@ -1,4 +1,4 @@
-"""Nutrition lookup cache — remembered nutrition data for a food, by key.
+"""Nutrition lookup cache, remembered nutrition data for a food, by key.
 
 Looking up a food's nutrition (via an external source or the LLM) is slow and
 sometimes costly, so results are cached for a while. Entries older than the TTL

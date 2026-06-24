@@ -1,4 +1,4 @@
-"""Tool registry — the engine's extension seam.
+"""Tool registry, the engine's extension seam.
 
 Tools are vendor-neutral: each carries a JSON-schema (``{name, description,
 input_schema}``) the LLM sees, plus an async handler. Domain modules and the

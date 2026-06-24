@@ -1,4 +1,4 @@
-"""Diet profiles — one stored health/nutrition profile per family member.
+"""Diet profiles, one stored health/nutrition profile per family member.
 
 ``member`` is a free-text identifier (no hardcoded members). A profile holds the
 slow-changing facts used to tailor advice and targets: sex, age, height, goal,

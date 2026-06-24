@@ -1,4 +1,4 @@
-"""Auto-categorization rules — keyword → category.
+"""Auto-categorization rules, keyword to category.
 
 When a transaction's description contains a rule's keyword, the transaction is
 filed under that rule's category. This is what lets imported bank statements get
@@ -77,7 +77,7 @@ async def apply_rules() -> dict:
 
     Use this after editing rules to bring old transactions in line. Returns a
     count of how many transactions moved into each category. Note this overrides
-    manual categorizations too — for a gentler pass use ``apply_rule``.
+    manual categorizations too, for a gentler pass use ``apply_rule``.
     """
     rules = await list_rules()
     if not rules:

@@ -2,7 +2,7 @@
 
 Nothing here changes data except ``reset_finance`` (a deliberate wipe for ending
 a test run). Reports exclude internal transfers between the household's own
-accounts, since those are neither income nor spending — except balances, which
+accounts, since those are neither income nor spending, except balances, which
 always count every movement.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ MAX_MATRIX_MONTHS = 120  # safety cap for "whole history" (10 years)
 
 async def reset_finance(reset_categories: bool = False,
                         reset_balances: bool = False) -> dict:
-    """Wipe finance data — meant for ending a test run, not everyday use.
+    """Wipe finance data, meant for ending a test run, not everyday use.
 
     Always clears transactions, budgets and goals. Optionally also restores the
     default category set and zeroes every account's opening balance. Returns a
@@ -179,7 +179,7 @@ async def category_spending_year(year: int, owner: str | None = None) -> list[di
     """Per-category spending for a year, with a 12-month breakdown each.
 
     Returns ``[{category, total, months:[12]}]`` sorted by total spend, biggest
-    first — the data behind a "where did the money go this year" view. Optionally
+    first, the data behind a "where did the money go this year" view. Optionally
     filtered to one owner; excludes internal transfers.
     """
     where = "WHERE t.amount < 0 AND t.date LIKE ? AND t.category!=?"
@@ -208,7 +208,7 @@ async def category_spending_year(year: int, owner: str | None = None) -> list[di
 
 
 async def years_with_data() -> list[int]:
-    """Distinct years that have any transactions — for a year navigator."""
+    """Distinct years that have any transactions, for a year navigator."""
     async with connect() as conn:
         cur = await conn.execute(
             "SELECT DISTINCT CAST(substr(date, 1, 4) AS INTEGER) year "

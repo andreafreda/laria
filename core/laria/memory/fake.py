@@ -1,6 +1,6 @@
 """In-memory backend: no network, no deps. Default for tests and dev.
 
-Recall is naive substring/keyword overlap — enough to exercise the engine and
+Recall is naive substring/keyword overlap, enough to exercise the engine and
 the MemoryBackend contract without pulling in mem0 or an embedding model.
 """
 from __future__ import annotations

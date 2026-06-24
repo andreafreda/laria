@@ -1,4 +1,4 @@
-"""Hydration log — how much each member drank, in millilitres.
+"""Hydration log, how much each member drank, in millilitres.
 
 A tiny append log behind "add a glass" buttons and a daily total. The undo
 helper exists because the common mistake is one tap too many.

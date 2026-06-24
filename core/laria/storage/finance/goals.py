@@ -1,7 +1,7 @@
-"""Savings goals — a target amount, optionally by a deadline, and progress toward it.
+"""Savings goals, a target amount, optionally by a deadline, and progress toward it.
 
 Think of each goal as a labelled piggy bank: it has a target, a running saved
-amount, and (optionally) a target date. ``get_goals`` derives the helpful bits —
+amount, and (optionally) a target date. ``get_goals`` derives the helpful bits:
 how much is left and how much to set aside per month to get there in time.
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _months_until(target_date: str, today: date) -> int:
 async def set_goal(name: str, target: float, target_date: str | None = None) -> int:
     """Create a goal or update its target/deadline; return its id.
 
-    The already-saved amount is left untouched — change that with
+    The already-saved amount is left untouched, change that with
     ``add_to_goal``. The target is stored as a positive number.
     """
     name = (name or "").strip()

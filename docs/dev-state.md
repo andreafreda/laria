@@ -70,7 +70,8 @@ docs/         plan.md (piano+tracker), dev-state.md (questo)
 - `storage/finance.py` (888 righe) → **package `storage/finance/`**: accounts, transactions, categories, rules, budgets, goals, reports + facade `__init__` (API invariata). 38 verdi.
 - `storage/food.py` (645 righe) → **package `storage/food/`**: profiles, weight, meals, plan, hydration, shopping, pantry, cache + facade. 38 verdi.
 - Pattern: split per concetto dietro facade re-export → chiamanti e test invariati.
-- Smell aperto noto: `update_*` (assignments/values dinamico) ripetuto in 5 moduli; lasciato esplicito (coercion per-funzione → helper meno chiaro).
+- Smell `update_*` RISOLTO: helper unico `db.build_set_clause(changes)` (dict colonna:valore, scarta None, ritorna clause+params); coercion resta esplicita nel chiamante. Applicato a update_account/transaction/weight/meal/pantry_item.
+- Convenzione prosa: niente trattini come punteggiatura (em-dash/` - `) in docstring/commenti/README; usare virgola/due-punti/parentesi (skill /codecraft regola 10). Sweep fatto su core + README.
 - Candidati refactor residui: `misc.py` (271, 4 concern) opzionale; `conversations.py`/`engine` ok.
 
 ## STORAGE PORT COMPLETO ✅

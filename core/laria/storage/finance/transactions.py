@@ -1,14 +1,14 @@
-"""Transactions — the individual money movements booked against an account.
+"""Transactions, the individual money movements booked against an account.
 
 Amounts are signed: positive is money in (income), negative is money out
-(expense). Everything else in finance — balances, budgets, reports — is derived
+(expense). Everything else in finance (balances, budgets, reports) is derived
 from these rows.
 """
 from __future__ import annotations
 
 from .accounts import get_account
 from .rules import list_rules, match_rule
-from ..db import connect
+from ..db import build_set_clause, connect
 
 
 async def add_transaction(account: str, date: str, amount: float,
@@ -97,28 +97,28 @@ async def update_transaction(transaction_id: int, *, date: str | None = None,
     Returns False if the id doesn't exist or if a given account name is unknown.
     Moving a transaction to another account is done by name and resolved to its id.
     """
-    changes: list[str] = []
-    values: list = []
-    if date is not None:
-        changes.append("date=?"); values.append(date)
-    if amount is not None:
-        changes.append("amount=?"); values.append(float(amount))
-    if category is not None:
-        changes.append("category=?"); values.append(category)
-    if description is not None:
-        changes.append("description=?"); values.append(description)
+    account_id = None
     if account is not None:
         account_row = await get_account(account)
         if account_row is None:
             return False
-        changes.append("account_id=?"); values.append(account_row["id"])
-    if not changes:
+        account_id = account_row["id"]
+
+    changes = {
+        "date": date,
+        "amount": float(amount) if amount is not None else None,
+        "category": category,
+        "description": description,
+        "account_id": account_id,
+    }
+    clause, params = build_set_clause(changes)
+    if not clause:
         return False
 
-    values.append(int(transaction_id))
+    params.append(int(transaction_id))
     async with connect() as conn:
         cur = await conn.execute(
-            f"UPDATE finance_transactions SET {', '.join(changes)} WHERE id=?", values
+            f"UPDATE finance_transactions SET {clause} WHERE id=?", params
         )
         await conn.commit()
         return cur.rowcount > 0

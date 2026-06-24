@@ -1,4 +1,4 @@
-"""Pantry — what's currently in stock at home, with optional expiry dates.
+"""Pantry, what's currently in stock at home, with optional expiry dates.
 
 Tracks staples so the assistant can warn about items about to expire and answer
 "do we have…". Name lookups are partial/case-insensitive, except consuming a
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from ..db import connect
+from ..db import build_set_clause, connect
 
 
 async def add_pantry_items(items: list[dict]) -> int:
@@ -47,7 +47,7 @@ async def get_pantry(category: str | None = None) -> list[dict]:
 
 
 async def get_pantry_expiring(within_days: int = 3) -> list[dict]:
-    """Items expiring within N days (or already expired) — for "use it up" nudges."""
+    """Items expiring within N days (or already expired), for "use it up" nudges."""
     cutoff = (date.today() + timedelta(days=within_days)).isoformat()
     async with connect() as db:
         cur = await db.execute(
@@ -81,22 +81,19 @@ async def update_pantry_item(name: str, qty: str | None = None,
 
     Returns how many rows changed (0 if the name is blank or nothing matched).
     """
-    assignments: list[str] = []
-    values: list = []
-    if qty is not None:
-        assignments.append("qty = ?"); values.append(qty)
-    if category is not None:
-        assignments.append("category = ?"); values.append(category)
-    if expires_on is not None:
-        assignments.append("expires_on = ?"); values.append(expires_on or None)
-    if not assignments or not (name or "").strip():
+    changes = {
+        "qty": qty,
+        "category": category,
+        "expires_on": (expires_on or None) if expires_on is not None else None,
+    }
+    clause, params = build_set_clause(changes)
+    if not clause or not (name or "").strip():
         return 0
-    assignments.append("updated_at = CURRENT_TIMESTAMP")
-    values.append(f"%{name}%")
+    clause += ", updated_at = CURRENT_TIMESTAMP"
+    params.append(f"%{name}%")
     async with connect() as db:
         cur = await db.execute(
-            f"UPDATE pantry_items SET {', '.join(assignments)} WHERE LOWER(name) LIKE LOWER(?)",
-            values,
+            f"UPDATE pantry_items SET {clause} WHERE LOWER(name) LIKE LOWER(?)", params
         )
         await db.commit()
         return cur.rowcount

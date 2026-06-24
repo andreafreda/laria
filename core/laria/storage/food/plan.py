@@ -1,4 +1,4 @@
-"""Weekly meal plan — what's intended to be eaten, per day and meal slot.
+"""Weekly meal plan, what's intended to be eaten, per day and meal slot.
 
 Distinct from logged meals (``meals.py``): this is the plan ahead, not the
 record of what happened. Each slot is keyed by (date, meal_type, member); an

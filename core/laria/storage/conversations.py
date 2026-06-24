@@ -1,7 +1,7 @@
 """Conversation persistence: recent turns, rolling summary, key/value notes.
 Ported from HARIA ``memory/core.py`` (the chat-transcript parts).
 
-This is the raw transcript the engine replays each turn — distinct from the
+This is the raw transcript the engine replays each turn, distinct from the
 semantic agent memory (``laria.memory.MemoryBackend``). HARIA's FTS keyword
 recall is intentionally dropped here: semantic/keyword recall now belongs to the
 MemoryBackend.

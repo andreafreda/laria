@@ -1,4 +1,4 @@
-"""Shopping list — items to buy, with optional quantity, category and price.
+"""Shopping list, items to buy, with optional quantity, category and price.
 
 Items can be checked off as you shop, and the optional prices roll up into an
 estimated basket cost. Name-based lookups use partial, case-insensitive matching
@@ -101,7 +101,7 @@ async def toggle_shopping_item(item_id: int) -> bool:
 
 
 async def clear_shopping_list(only_checked: bool = False) -> int:
-    """Empty the list — everything, or just the checked-off items. Returns count."""
+    """Empty the list, everything, or just the checked-off items. Returns count."""
     async with connect() as db:
         if only_checked:
             cur = await db.execute("DELETE FROM shopping_items WHERE checked = 1")
