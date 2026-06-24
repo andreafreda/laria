@@ -49,6 +49,8 @@ async def init_db() -> None:
         await db.execute("PRAGMA busy_timeout=5000")
         await db.execute("PRAGMA foreign_keys=ON")
         await db.executescript(_FINANCE_SCHEMA)
+        await db.executescript(_FOOD_SCHEMA)
+        await db.executescript(_UTILITIES_SCHEMA)
 
         # Seed generic default categories (idempotent, no personal data).
         for cat in DEFAULT_CATEGORIES:
@@ -102,5 +104,130 @@ CREATE TABLE IF NOT EXISTS finance_goals (
     saved REAL NOT NULL DEFAULT 0,
     target_date TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+# Nutrition columns are denormalized onto meals and meal_items so a day's
+# totals are a single SUM. ``member`` identifies the family member (free text).
+_FOOD_SCHEMA = """
+CREATE TABLE IF NOT EXISTS diet_profiles (
+    member TEXT PRIMARY KEY,
+    sex TEXT,
+    age INTEGER,
+    height_cm REAL,
+    weight_kg REAL,
+    goal TEXT,
+    activity_level TEXT,
+    kcal_target INTEGER,
+    bmi REAL,
+    allergies TEXT,
+    preferences TEXT,
+    restrictions TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS weight_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member TEXT NOT NULL,
+    weight_kg REAL NOT NULL,
+    bmi REAL,
+    logged_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS meals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member TEXT NOT NULL,
+    meal_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    kcal_total REAL,
+    protein_g REAL,
+    carbs_g REAL,
+    fat_g REAL,
+    fiber_g REAL,
+    sugar_g REAL,
+    sat_fat_g REAL,
+    sodium_mg REAL,
+    vit_c_mg REAL,
+    vit_d_ug REAL,
+    iron_mg REAL,
+    calcium_mg REAL,
+    potassium_mg REAL,
+    magnesium_mg REAL,
+    eaten_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    logged_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS meal_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    grams REAL,
+    kcal REAL,
+    protein_g REAL,
+    carbs_g REAL,
+    fat_g REAL,
+    fiber_g REAL,
+    sugar_g REAL,
+    sat_fat_g REAL,
+    sodium_mg REAL,
+    vit_c_mg REAL,
+    vit_d_ug REAL,
+    iron_mg REAL,
+    calcium_mg REAL,
+    potassium_mg REAL,
+    magnesium_mg REAL
+);
+CREATE TABLE IF NOT EXISTS meal_plan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    meal_type TEXT NOT NULL,
+    member TEXT NOT NULL DEFAULT '',
+    items TEXT NOT NULL,
+    recipe TEXT,
+    servings INTEGER,
+    kcal REAL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(date, meal_type, member)
+);
+CREATE TABLE IF NOT EXISTS hydration_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member TEXT NOT NULL,
+    ml REAL NOT NULL,
+    logged_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS shopping_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    qty TEXT,
+    category TEXT,
+    checked INTEGER DEFAULT 0,
+    price REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS pantry_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    qty TEXT,
+    category TEXT,
+    expires_on TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS food_cache (
+    key TEXT PRIMARY KEY,
+    data TEXT NOT NULL,
+    source TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+# One row per (utility, metric, year, month). metric: 'kwh'|'m3' for
+# consumption, 'cost' for currency.
+_UTILITIES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS utility_bills (
+    utility TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    year INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    value REAL NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (utility, metric, year, month)
 );
 """
