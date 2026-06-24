@@ -176,6 +176,30 @@ particula.tech (mem0 vs zep vs letta vs cognee), atlan.com best-frameworks-2026,
 github coolmanns/openclaw-memory-architecture, mem0 openclaw integration guide.
 ⚠️ Alcune fonti potrebbero essere non verificate/speculative: confermare prima di basarci.
 
+## 3c. Storage backend — esplorazione (performance & alternative)
+
+Nota chiave: **a scala "famiglia" (10³–10⁴ memorie) la latenza di recall NON è l'indice**
+(tutti μs–ms), ma **embedding + LLM**. L'indice conta oltre ~10⁵–10⁶ vettori. Quindi si sceglie
+per **semplicità / portabilità / scala futura / hybrid (vettori+BM25)**, non per i μs.
+Lo storage va **dietro un'astrazione** (`StorageBackend`) → sostituibile come il resto.
+
+| Opzione | Embedded/Server | Vettori | Keyword/BM25 | Sweet-spot | Deps | Note |
+|---|---|---|---|---|---|---|
+| **SQLite + sqlite-vec (+FTS5)** | embedded, 1 file | brute/IVF | **FTS5 nativo** | ≤~1M | minime, cross-OS | semplice, hybrid out-of-the-box; consigliato fase 1 |
+| **LanceDB** | embedded (Arrow) | **HNSW/IVF-PQ** | full-text index | milioni | media | 1M vett. <20ms (≈3-5ms tunato); multimodale, versioning |
+| **DuckDB + VSS + FTS** | embedded, colonnare | HNSW | FTS | milioni + analytics | media | ottimo se faremo aggregazioni pesanti/SQL |
+| **Chroma (embedded)** | embedded | HNSW | no BM25 nativo | ~10⁵ | py deps | semplice ma più pesante, no hybrid nativo |
+| **FAISS / usearch + SQLite** | lib + file | ANN top | (SQLite FTS5) | milioni | C++/bindings | velocissimo ma è "solo indice": metadati/lifecycle a parte |
+| **txtai** | embedded | (faiss) | sì | ~10⁵–10⁶ | py | all-in-one embeddings+search |
+| **pgvector (Postgres)** | **server** | HNSW | tsvector | milioni, multi-tenant | Postgres | per fase cloud/multi-tenant |
+| **Qdrant / Milvus / Weaviate** | **server** | HNSW top | ibrido | ≥10⁶ | servizio extra | scala grande; contro "locale semplice" |
+| **Redis (vector)** | **server, in-mem** | HNSW | sì | bassa latenza | servizio+RAM | veloce ma RAM-bound |
+
+**Raccomandazione fase 1:** **SQLite + sqlite-vec + FTS5** — un file, locale, cross-OS, hybrid
+(vettori+BM25) nativo, zero servizi; perfetto per la scala famiglia e per il deploy Docker.
+**Scala/futuro:** **LanceDB** (HNSW, multimodale, versioning) o **DuckDB+VSS** (se analytics);
+**pgvector** quando andremo multi-tenant server. Tutti dietro `StorageBackend` → si cambia senza riscrivere la logica.
+
 ## 4. Astrazione (qualunque sia il motore)
 ```
 Embedder (interface): embed(texts) -> vectors   # locale default, cloud opz.
