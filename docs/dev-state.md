@@ -65,6 +65,14 @@ docs/         plan.md (piano+tracker), dev-state.md (questo)
 - **NON portati da `memory/core.py`** (di proposito): `entity_cache` + `mqtt_topics` → concern del **connector-ha** (HA-specifici), andranno lì. Migrazioni one-shot `ha_chat_`/`deactivate_generic_conti` = cruft HARIA, droppate.
 - `tests/test_conversations_misc.py`: 6 test. Totale 33 verdi.
 
+## REFACTOR /codecraft (storage)
+- Skill `/codecraft` (repo `laria/.claude/skills/`, globale, e repo `andreafreda/skills`): codice leggibile-umano, SOLID con giudizio, no code smell, docstring human-oriented su ogni metodo, facade su split, no test-churn.
+- `storage/finance.py` (888 righe) → **package `storage/finance/`**: accounts, transactions, categories, rules, budgets, goals, reports + facade `__init__` (API invariata). 38 verdi.
+- `storage/food.py` (645 righe) → **package `storage/food/`**: profiles, weight, meals, plan, hydration, shopping, pantry, cache + facade. 38 verdi.
+- Pattern: split per concetto dietro facade re-export → chiamanti e test invariati.
+- Smell aperto noto: `update_*` (assignments/values dinamico) ripetuto in 5 moduli; lasciato esplicito (coercion per-funzione → helper meno chiaro).
+- Candidati refactor residui: `misc.py` (271, 4 concern) opzionale; `conversations.py`/`engine` ok.
+
 ## STORAGE PORT COMPLETO ✅
 Tutti i domini dati portati, tradotti EN, de-personalizzati, settings-driven, testati (33 verdi):
 finance, food, utilities, conversations, misc. Schema unico in `db.py:init_db()`.
