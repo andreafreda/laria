@@ -87,7 +87,14 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - Tool HA (house_state/control_device/speak_alexa) NON inclusi → si registrano dal **connector-ha** quando attivo.
 - `tests/test_engine.py`: 5 test con `FakeProvider` scriptato (respond, tool→respond, save+recall, deferred-respond, max_turns force-respond). Migliorato `FakeBackend.recall` (tokenizza `\w+`). Totale 38 verdi.
 
-## Prossimo: moduli logici + canali/web API
+## FATTO — modulo finance come tool (`core/laria/modules/`)
+- `modules/finance.py`: `register_finance_tools(registry)` aggiunge 8 tool che fanno da ponte sottile tra LLM e `storage.finance`: add_transaction, list_recent_transactions, get_balances, expense_summary, set_budget, budget_status, list_goals, add_to_goal. Handler ritornano JSON (dati) o frase di conferma (azioni).
+- `modules/__init__.py`: esporta `register_finance_tools`. Pattern: ogni dominio ha un `register_*`; l'app sceglie cosa accendere; engine resta generico.
+- Niente cicli: modules importa da `engine.tools` + `storage.finance`; engine non importa modules (registry iniettato).
+- `tests/test_modules_finance.py`: 3 test (tool registrati, add_transaction via Engine+FakeProvider persiste sul DB, get_balances dispatch). Totale 41 verdi.
+- Engine ora opera davvero su finance end-to-end (config→llm→engine→registry→storage).
+
+## Prossimo: food/utilities come tool + canali/web API
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
