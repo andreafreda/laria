@@ -19,7 +19,7 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [x] **Memory wrapper** `core/laria/memory/`: `MemoryBackend` astratto + `FakeBackend` + `Mem0Backend` + `Embedder` + registry (mem0 plug&play).
 - [x] **Port storage COMPLETO** `core/laria/storage/` de-personalizzato, EN, settings-driven: finance, food, utilities, conversations, misc (33 test verdi).
 - [x] **Engine agentico provider-agnostic** `core/laria/engine/`: loop tool-use su `provider.generate`, ToolRegistry pluggable, core-tool memory/recall/respond, prompt EN, summary rolling (38 test verdi).
-- [~] Moduli dominio come tool registrabili: **finance + food + utilities fatti** (`modules/`, 21 tool). Restano: nutrition lookup, econ_import parser.
+- [x] Moduli dominio come tool registrabili: **finance + food + utilities** (`modules/`, 22 tool) + **nutrition lookup** (`services/nutrition.py` OFF/USDA + tool `lookup_nutrition`) + **parser estratti** (`ingest/bank_statements.py` BancoPosta/Postepay, categorie EN). Resta: endpoint web upload per il parser.
 - [x] **Convenzione codice**: skill `/codecraft` (repo `.claude/skills/`, globale, pubblicata su `andreafreda/skills`) project-agnostic: leggibilità umana, SOLID con giudizio, no code smell, docstring human-oriented, niente trattini come punteggiatura in prosa.
 - [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite a quel punto: 46 test verdi (ora 65).
 - [~] Canali: **web API JSON fatta** (`core/laria/app.py` composition root + `core/laria/web/`: POST /api/chat, GET /health, `python -m laria.web`). Restano: WebSocket streaming, Telegram astratto.

@@ -15,6 +15,7 @@ from datetime import date
 from typing import Any
 
 from ..engine.tools import Tool, ToolContext, ToolRegistry
+from ..services import nutrition
 from ..storage import food
 
 
@@ -90,6 +91,18 @@ async def _pantry_expiring(inputs: dict[str, Any], ctx: ToolContext) -> str:
     """Return pantry items expiring within N days (default 3) as JSON."""
     within_days = int(inputs.get("within_days", 3))
     return json.dumps(await food.get_pantry_expiring(within_days), ensure_ascii=False)
+
+
+async def _lookup_nutrition(inputs: dict[str, Any], ctx: ToolContext) -> str:
+    """Look up per-100g nutrition for a food, to fill in a meal's values.
+
+    Returns JSON with kcal and macros, or a note if no source has it (the model
+    can then estimate).
+    """
+    values = await nutrition.lookup_food(inputs["query"])
+    if not values:
+        return f"No nutrition data found for '{inputs['query']}'."
+    return json.dumps(values, ensure_ascii=False)
 
 
 _MEMBER = {"type": "string", "description": "Family member the entry is about"}
@@ -218,4 +231,15 @@ def register_food_tools(registry: ToolRegistry) -> None:
             "properties": {"within_days": {"type": "integer"}},
         },
         handler=_pantry_expiring,
+    ))
+    registry.register(Tool(
+        name="lookup_nutrition",
+        description=("Look up per-100g calories and macros for a food by name, to "
+                     "fill in a meal before logging it."),
+        input_schema={
+            "type": "object",
+            "properties": {"query": {"type": "string", "description": "Food name to look up"}},
+            "required": ["query"],
+        },
+        handler=_lookup_nutrition,
     ))

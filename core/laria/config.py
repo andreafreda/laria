@@ -73,6 +73,8 @@ class Settings:
     telegram_token: str = field(default_factory=lambda: _env("TELEGRAM_TOKEN"))
     web_host: str = field(default_factory=lambda: _env("WEB_HOST", "0.0.0.0"))
     web_port: int = field(default_factory=lambda: _env_int("WEB_PORT", 8080))
+    # USDA FoodData Central key for nutrition lookups (DEMO_KEY works, rate-limited).
+    usda_api_key: str = field(default_factory=lambda: _env("USDA_API_KEY", "DEMO_KEY"))
     llm: LLMSettings = field(default_factory=LLMSettings)
     memory: MemorySettings = field(default_factory=MemorySettings)
     ha: HASettings = field(default_factory=HASettings)

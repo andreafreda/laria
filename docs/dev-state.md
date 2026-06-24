@@ -135,6 +135,13 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_app.py`: smoke test `build_engine` (provider ollama, no key): registra core+finance+food+utilities; HA off di default, on con HA_ENABLED. 65 verdi.
 - README: Quickstart (docker + core) + Status aggiornato.
 
+## FATTO — moduli logici (nutrition + parser estratti)
+- `ingest/bank_statements.py`: port di `econ_import.py`. Logica PURA (parse rows→movimenti {date,amount,description,category,hash}) + lettori csv (stdlib) e xlsx (openpyxl opzionale, import lazy). Categorie target EN, keyword IT (matchano descrizioni banca). Fix bug: selezione colonna data con check `is not None` (l'indice 0 è valido, `or` lo saltava). Dedup hash: 1ª occorrenza hash storico, ripetizioni con suffisso.
+- `services/nutrition.py`: port di `nutrition.py`. Parser PURI `parse_off_nutriments`/`parse_usda_food` + `lookup_food`/`lookup_barcode` (cache `storage.food` → OFF → USDA). Network best-effort: errore→None (mai rompe il log pasto). USDA key da `settings.usda_api_key` (env USDA_API_KEY, default DEMO_KEY).
+- Tool nuovo `lookup_nutrition(query)` nel modulo food (22 tool totali).
+- `tests/test_ingest_bank_statements.py` (6) + `tests/test_nutrition.py` (4, parser puri + cache-hit no-rete). Totale 74 verdi.
+- Resta: endpoint web upload che chiama `bank_statements.parse` + `finance.import_transactions` (il parser prende bytes/righe, non è un tool LLM).
+
 ## Prossimo: UI Angular, WebSocket streaming, Telegram, MQTT mirror, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
