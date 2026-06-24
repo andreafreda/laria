@@ -5,10 +5,15 @@ the MemoryBackend contract without pulling in mem0 or an embedding model.
 """
 from __future__ import annotations
 
+import re
 import time
 
 from .base import MemoryBackend
 from .types import MemoryItem, Scope
+
+
+def _tokens(text: str) -> set[str]:
+    return set(re.findall(r"\w+", text.lower()))
 
 
 def _visible(item_scope: Scope, query_scope: Scope) -> bool:
@@ -38,12 +43,12 @@ class FakeBackend(MemoryBackend):
 
     def recall(self, scope: Scope, query: str, *, k: int = 5,
                filters: dict | None = None) -> list[MemoryItem]:
-        terms = {t for t in query.lower().split() if t}
+        terms = _tokens(query)
         scored: list[MemoryItem] = []
         for item in self._items.values():
             if not _visible(item.scope, scope):
                 continue
-            words = set(item.text.lower().split())
+            words = _tokens(item.text)
             overlap = len(terms & words)
             if overlap or not terms:
                 item.score = float(overlap)

@@ -3,7 +3,7 @@
 > Doc interno (IT). Insieme a `plan.md` è la **fonte di verità**. Se la sessione si
 > compatta, leggere QUESTO per riprendere col dettaglio tecnico. Aggiornare a ogni step.
 
-Ultimo aggiornamento: storage port COMPLETO (finance+food+utilities+conversations+misc), 33 test verdi.
+Ultimo aggiornamento: ENGINE provider-agnostic (`core/laria/engine/`), 38 test verdi.
 
 ## Coordinate
 - Repo LARIA: `C:\projects\laria` → github.com/andreafreda/laria (branch `main`).
@@ -69,13 +69,19 @@ docs/         plan.md (piano+tracker), dev-state.md (questo)
 Tutti i domini dati portati, tradotti EN, de-personalizzati, settings-driven, testati (33 verdi):
 finance, food, utilities, conversations, misc. Schema unico in `db.py:init_db()`.
 
-## Prossimo grande step: ENGINE provider-agnostic
-Port `haria/app/claude_engine.py` → `core/laria/engine.py`:
-- sostituire `client.messages.create(...)` con `provider.generate(...)` (già pronto: `laria.llm.get_provider`).
-- tool definitions + system prompt + loop tool-use già robusti in HARIA (round bugfix). Tradurre prompt IT→EN (`prompts.py`).
-- l'engine consuma: `laria.storage.*` (dati), `laria.memory.MemoryBackend` (recall/write semantico), `laria.llm` (LLM). Conversation history da `storage.conversations`.
-- tradurre i tool (nomi/descrizioni IT→EN) — sono l'interfaccia che l'LLM vede.
-Dipendenze a valle dopo engine: channels/web API, connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
+## FATTO — ENGINE provider-agnostic (`core/laria/engine/`)
+Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/anthropic:
+- `tools.py`: `Tool` (name/description/input_schema/handler), `ToolContext` (user_id/memory/scope/user_config), `ToolRegistry` (register/owns/schemas/dispatch). Rimpiazza `modules.tools()/owns()/dispatch()` + i core-tool HA hardcoded.
+- `prompts.py`: prompt EN (system_base/datetime_block/summarize_*). `get(key, **fmt)`.
+- `core_tools.py`: tool built-in connector-independent: `get_memory`/`save_memory` (note key/value via `storage.conversations` + index in MemoryBackend), `recall` (MemoryBackend semantico). `respond` gestito dal loop.
+- `engine.py`: `Engine(provider, memory, registry?, settings?, max_turns=8)`. `chat(user_id, text, user_config)`: loop agentico con `provider.generate` (blocchi normalizzati), tool_choice any/force-respond ultimo giro, deferred-respond se respond+altri tool insieme, summary rolling via provider, system con cache-breakpoint (base stabile / volatile note+summary / datetime uncached). History da `storage.conversations`.
+- Tool HA (house_state/control_device/speak_alexa) NON inclusi → si registrano dal **connector-ha** quando attivo.
+- `tests/test_engine.py`: 5 test con `FakeProvider` scriptato (respond, tool→respond, save+recall, deferred-respond, max_turns force-respond). Migliorato `FakeBackend.recall` (tokenizza `\w+`). Totale 38 verdi.
+
+## Prossimo: moduli logici + canali/web API
+- moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
+- canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
+- poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
 
 ## Mappa sorgente HARIA → destinazione LARIA (per i prossimi port)
 HARIA `haria/app/`:

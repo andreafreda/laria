@@ -17,8 +17,8 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [x] Core bootstrap: `laria.config` (env, no Supervisor) + `laria.llm` (provider astratto + Anthropic + registry) + test.
 - [x] **Memory wrapper** `core/laria/memory/`: `MemoryBackend` astratto + `FakeBackend` + `Mem0Backend` + `Embedder` + registry (mem0 plug&play).
 - [x] **Port storage COMPLETO** `core/laria/storage/` de-personalizzato, EN, settings-driven: finance, food, utilities, conversations, misc (33 test verdi).
-- [ ] Port moduli logici (nutrition lookup, econ_import parser, prompts) sull'astrazione provider+storage.
-- [ ] Engine agentico provider-agnostic (claude_engine → laria engine).
+- [x] **Engine agentico provider-agnostic** `core/laria/engine/`: loop tool-use su `provider.generate`, ToolRegistry pluggable, core-tool memory/recall/respond, prompt EN, summary rolling (38 test verdi).
+- [ ] Port moduli logici come tool registrabili (nutrition lookup, econ_import parser, wrapper tool su storage finance/food).
 - [ ] Canali (Telegram) astratti; web API (REST/WS).
 - [ ] connector-ha (REST/WS + subscribe_events + MQTT mirror).
 - [ ] UI Angular (incl. dashboard configurazione LLM).
