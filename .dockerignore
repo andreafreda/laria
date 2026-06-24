@@ -1,0 +1,17 @@
+# Keep the build context small and free of secrets and local state.
+.git
+.gitignore
+.env
+*.env
+docs/
+ui/
+connector-ha/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/tests/
+data/
+*.db
+*.sqlite
+node_modules/
+.claude/

@@ -24,7 +24,7 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [~] Canali: **web API JSON fatta** (`core/laria/app.py` composition root + `core/laria/web/`: POST /api/chat, GET /health, `python -m laria.web`). Restano: WebSocket streaming, Telegram astratto.
 - [ ] connector-ha (REST/WS + subscribe_events + MQTT mirror).
 - [ ] UI Angular (incl. dashboard configurazione LLM).
-- [ ] Docker (Dockerfile multi-stage + compose).
+- [~] Docker: **immagine core fatta** (`docker/Dockerfile` python-slim non-root + healthcheck, `docker/compose.yaml` con volume dati, `.dockerignore`; `python -m laria.web`). Build non ancora verificata in locale (Docker Desktop engine spento). Resta: immagine combinata con UI.
 - [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).
 - [ ] **Memoria agente**: fase 1 = **mem0 dietro wrapper nostro `MemoryBackend`** (plug&play); improvement = motore proprio L0-L3 dopo. Vedi `design-memory.md` §6bis + `memory-engine-handoff.md`.
 

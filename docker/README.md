@@ -1,7 +1,31 @@
-# docker
+# Docker
 
-Self-host deployment. `Dockerfile` (python-slim) to build the core + UI, plus a
-`docker-compose.yml` with the app + (optional) MQTT broker + a `data/` volume.
-Config via `.env`.
+Run LARIA as a standalone container: the core engine behind its JSON API.
 
-Bootstrap TODO: multi-stage Dockerfile (build Angular UI + core runtime), compose file.
+## Quick start
+
+```bash
+# from the repo root
+ANTHROPIC_API_KEY=sk-... docker compose -f docker/compose.yaml up --build
+```
+
+The API is then on `http://localhost:8080`:
+
+```bash
+curl http://localhost:8080/health
+curl -X POST http://localhost:8080/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":"me","text":"how much did I spend this month?"}'
+```
+
+## Notes
+
+- The SQLite database lives in the `laria-data` volume, so it survives restarts.
+- Secrets stay out of the image. Pass `ANTHROPIC_API_KEY` (and other keys) via
+  the environment or an `.env` file, never baked into the build.
+- Build the image directly if you prefer:
+  `docker build -f docker/Dockerfile -t laria:dev .` (run from the repo root).
+- Configuration is environment-driven (see `.env.example`): `LLM_PROVIDER`,
+  `LLM_MODEL`, `WEB_HOST`, `WEB_PORT`, `LARIA_DB_PATH`, and so on.
+- The image ships the core API only. The Angular UI is built and served
+  separately (see `ui/`); a combined image comes later.

@@ -1,0 +1,22 @@
+# Run LARIA locally:
+#   ANTHROPIC_API_KEY=sk-... docker compose -f docker/compose.yaml up --build
+# The SQLite database persists in the named volume across restarts.
+services:
+  laria:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: laria:dev
+    ports:
+      - "8080:8080"
+    environment:
+      LLM_PROVIDER: anthropic
+      LLM_MODEL: ${LLM_MODEL:-claude-opus-4-8}
+      # Required: the active provider's key. Never bake it into the image.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in your shell or .env}
+    volumes:
+      - laria-data:/data
+    restart: unless-stopped
+
+volumes:
+  laria-data:

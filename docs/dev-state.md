@@ -107,7 +107,14 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_web_api.py`: 5 test con StubEngine + aiohttp TestClient (health, chat reply, default user_id, 400 text vuoto, 400 JSON invalido). Totale 51 verdi.
 - LARIA ora avviabile end-to-end: `python -m laria.web` (serve ANTHROPIC_API_KEY in env).
 
-## Prossimo: WebSocket streaming, Telegram, connector-ha, UI Angular, Docker
+## FATTO — Docker (immagine core)
+- `docker/Dockerfile`: python:3.12-slim, `pip install ./core`, utente non-root `laria`, DB in volume `/data`, HEALTHCHECK via `/health` (urllib, no tool extra), CMD `python -m laria.web`. Build context = repo root.
+- `docker/compose.yaml`: service `laria`, porta 8080, volume `laria-data:/data`, `ANTHROPIC_API_KEY` richiesta da env (mai nell'immagine), restart unless-stopped.
+- `.dockerignore`: esclude git/docs/ui/tests/__pycache__/db/segreti.
+- `docker/README.md`: quick start + curl esempi.
+- Verifica: import entrypoint ok (`laria.web.server`/`laria.app`/`laria.web`). Build immagine NON eseguita (Docker Desktop engine spento sul dev box); da fare quando l'engine è attivo.
+
+## Prossimo: WebSocket streaming, Telegram, connector-ha, UI Angular, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
