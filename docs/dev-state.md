@@ -67,6 +67,15 @@ HARIA `haria/app/`:
   `scheduler.py` (APScheduler), `mqtt_pub.py` + `ha_client.py` → confluiscono in `connector-ha/`.
 - `main.py` orchestrazione.
 
+## Memoria agente — DECISO (fase 1)
+- Backend di partenza: **mem0** (Apache-2.0, Python, locale) **dietro wrapper nostro `MemoryBackend`** → cambio motore plug & play. L'engine parla solo al wrapper.
+- Improvement dopo: motore proprio **L0-L3** (modello TencentDB/OpenHuman) su **sqlite-vec+FTS5**, come backend alternativo.
+- Analisi completa: `design-memory.md` (architetture A-G, sistemi mercato pro/cons, storage §3c, ingestione/sharing da Mirage §3d, decisione §6bis). Handoff per sessione dedicata: `memory-engine-handoff.md`.
+- **Prossimo concreto memoria**: scaffold `core/laria/memory/` → `MemoryBackend` (interfaccia), `Embedder` (astratto, locale default), `Mem0Backend` (wrapper), `FakeBackend` (test no-rete).
+
+## Note operative
+- Skill `/handoff` (mattpocock) installata in `~/.claude/skills/handoff` ma NON ancora caricata dal harness in questa sessione (manca dalla lista). Riprovare dopo reload completo; per ora usare `memory-engine-handoff.md`.
+
 ## Prossimo step pianificato
 **Port storage (memory→storage) de-personalizzato**: portare il package memory in `core/laria/storage/`,
 `DB_PATH` da `get_settings().db_path`, e sostituire il seed conti/membri hardcoded (econ_def) con
