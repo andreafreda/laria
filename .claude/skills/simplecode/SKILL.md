@@ -39,6 +39,13 @@ session) understanding it at a glance, not for cleverness or line count.
    when a file mixes unrelated concerns — not to hit a line count.
 8. **Type hints + docstrings** on public functions: the signature and one line of
    intent should tell the reader how to use it without reading the body.
+9. **Document every main method, human-first.** Every public/important function,
+   class and module gets a docstring written for a *person*: say plainly what it
+   is for and when you'd reach for it — the intent and the role it plays — not a
+   restatement of the signature. Mention non-obvious inputs/outputs, side
+   effects, and gotchas. A newcomer should understand *why this exists* from the
+   docstring alone. Trivial one-line private helpers may skip it; anything a
+   reader would stop to ask "what's this for?" must have it.
 
 ## SOLID (apply with judgement, never at the cost of clarity)
 
@@ -64,6 +71,8 @@ real seam) exists — YAGNI wins ties.
 
 - Abbreviated/encoded names; single-letter vars outside tiny loops.
 - Comments restating the code, or none where a *why* is needed.
+- A main method with no docstring, or a docstring that just echoes its name
+  instead of explaining what it's for.
 - Nesting deeper than ~3; long boolean chains; clever comprehensions doing real work.
 - Duplicated SQL/string building repeated many times → name it once (only if it
   genuinely clarifies).
