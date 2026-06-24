@@ -1,15 +1,15 @@
 ---
-name: besimple
+name: simplecode
 description: >-
   Write code the way a thoughtful human engineer would — plain, obvious, and easy
   to follow — not machine-dense or over-abstracted. A founding premise of LARIA.
   Use whenever writing or refactoring LARIA code (any file under core/,
   connector-ha/, ui/), reviewing a diff for readability, or when the user mentions
   readability, simplicity, "clean code", "as if written by hand", or invokes
-  /besimple.
+  /simplecode.
 ---
 
-# besimple
+# simplecode
 
 Founding premise of LARIA: the code must read as if a careful human wrote it.
 Not necessarily short — **clear**. Optimize for the next person (or the next
@@ -40,6 +40,26 @@ session) understanding it at a glance, not for cleverness or line count.
 8. **Type hints + docstrings** on public functions: the signature and one line of
    intent should tell the reader how to use it without reading the body.
 
+## SOLID (apply with judgement, never at the cost of clarity)
+
+Readability comes first, but still design with SOLID in mind:
+
+- **S — Single Responsibility.** Each module/class/function has one reason to
+  change. A function that fetches, transforms and renders wants splitting.
+- **O — Open/Closed.** Extend via new implementations, not by editing stable
+  code. LARIA's seams already do this: add an `LLMProvider` / `MemoryBackend` /
+  `Tool`, don't patch the engine.
+- **L — Liskov.** Any implementation of an interface must be safely usable in its
+  place — same contract, no surprising side effects or weaker guarantees.
+- **I — Interface Segregation.** Small, focused interfaces. Don't force an
+  implementer to stub methods it doesn't need.
+- **D — Dependency Inversion.** Depend on abstractions, not concretions. The
+  engine talks to `LLMProvider`/`MemoryBackend`, never to Anthropic/mem0 directly.
+
+Don't over-engineer to "be SOLID": no needless interfaces, factories, or layers
+for a single concrete case. Apply the principle when a real second case (or a
+real seam) exists — YAGNI wins ties.
+
 ## Smells to fix
 
 - Abbreviated/encoded names; single-letter vars outside tiny loops.
@@ -50,7 +70,24 @@ session) understanding it at a glance, not for cleverness or line count.
 - A function that needs section comments inside it — it wants splitting.
 - Inconsistent param/return shapes across sibling functions.
 
+### Classic code smells (avoid)
+
+- **Long parameter lists / data clumps** → group related args into a small object.
+- **Feature envy** → logic that mostly touches another module's data belongs there.
+- **Primitive obsession** → model a domain concept instead of passing bare
+  strings/dicts everywhere.
+- **Shotgun surgery** → one change forcing edits in many files = missing seam.
+- **God object / leaky abstraction** → a class that knows too much, or an
+  interface exposing its implementation.
+- **Magic numbers/strings** → name them as constants.
+- **Dead code, duplicated logic, deep conditional nesting** → remove, extract,
+  flatten.
+- **Boolean trap** → a call like `f(true, false)` whose flags are unreadable at
+  the call site; prefer named args or distinct functions.
+
 ## Check before committing
 
 Read the diff as a stranger would. If any line makes you pause to decode it,
 rewrite it plainer. Ask: "would a human reviewer say this reads naturally?"
+Then a second pass: any code smell? any SOLID violation that a cheap, clarifying
+change would fix? Fix it now if it keeps the code simple; otherwise note it.
