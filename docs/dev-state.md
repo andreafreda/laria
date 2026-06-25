@@ -190,7 +190,9 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - **Core serve la UI**: `web/app.py._serve_ui` (da `LARIA_UI_DIR`, SPA fallback); middleware ora guarda solo `/api/`. Dockerfile multi-stage (node build UI + python serve) → immagine combinata su :8080.
 - Dev: API `python -m laria.web` (:8080) + UI `cd ui && npx ng serve` (:4200, punta a apiBaseUrl :8080). Prod/Docker: tutto su :8080.
 
-## Prossimo UI: pagina config LLM, grafici (matrix), consumo WebSocket streaming, build mobile Capacitor
+- Aggiunto: dashboard "spese per categoria" (barre CSS, da /api/finance/summary); pagina **import estratto** (`/import`, upload multipart → /api/finance/import) con link dal dashboard.
+
+## Prossimo UI: pagina config LLM (serve endpoint backend), grafici matrix, consumo WebSocket streaming, build mobile Capacitor (cap add). Verificare build Docker quando engine attivo.
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
