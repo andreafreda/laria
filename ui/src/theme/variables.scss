@@ -1,2 +1,37 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// LARIA theme. A warm, trustworthy palette (a guardian-of-the-home feel) on a
+// soft sand background, with a characterful body font, so the app does not look
+// like a default Ionic starter. See docs/reflections.md for the design intent.
+
+:root {
+  --ion-font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  // Primary: a deep teal (calm, money, trust).
+  --ion-color-primary: #0d9488;
+  --ion-color-primary-rgb: 13, 148, 136;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0b8278;
+  --ion-color-primary-tint: #259f94;
+
+  // Accent for highlights and calls to action: a warm amber.
+  --ion-color-secondary: #d97706;
+  --ion-color-secondary-rgb: 217, 119, 6;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #bf6905;
+  --ion-color-secondary-tint: #df851f;
+
+  // Warm neutral surfaces instead of stark white.
+  --ion-background-color: #faf7f2;
+  --ion-background-color-rgb: 250, 247, 242;
+  --ion-text-color: #1c1b1a;
+  --ion-text-color-rgb: 28, 27, 26;
+
+  --ion-card-background: #ffffff;
+  --ion-toolbar-background: #faf7f2;
+  --ion-item-background: #ffffff;
+
+  // Rounded, soft shapes.
+  --laria-radius: 16px;
+  --laria-shadow: 0 6px 24px rgba(28, 27, 26, 0.06);
+}

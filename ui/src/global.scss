@@ -35,3 +35,26 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+
+/* LARIA visual polish: softer cards, calmer toolbars, comfortable spacing. */
+ion-card {
+  border-radius: var(--laria-radius);
+  box-shadow: var(--laria-shadow);
+  margin: 14px 0;
+}
+
+ion-toolbar {
+  --border-width: 0;
+}
+
+ion-card-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+ion-list-header {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 1.25rem;
+  padding-top: 12px;
+}
