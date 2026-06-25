@@ -131,7 +131,7 @@ con schema dati e API di memoria (write/recall/forget). Da fare prima/insieme al
 ## Cose che aggiungo io (da valutare)
 
 - **A. Astrazione storage**: oggi SQLite hardcoded. Tenere repository pattern così in futuro Postgres/multi-utente cloud è possibile. Migrazioni versionate (oggi migrazioni leggere ad hoc).
-- **B. Auth & multi-tenant**: DECISO, vedi `design-auth.md`. Single-household multi-utente; profili (permanenti) + user (login opzionale attaccato a profilo) + tutela; JWT; owner seed da env; recovery owner/CLI/Telegram (no SMTP obbligatorio); isolamento tra famiglie = istanze dedicate (sqlite per volume). Multi-tenant condiviso = dopo. DA IMPLEMENTARE.
+- **B. Auth & multi-tenant**: IMPLEMENTATO (vedi `design-auth.md`). hash pbkdf2 + JWT, profiles/users/guardianships, login + change-password, middleware Bearer, /api/chat da token, Telegram allowlist, admin API owner-only (utenti/profili/tutele/reset/telegram-link), owner seed da env. Isolamento famiglie = istanze dedicate. Restano: reset Telegram self-service, multi-tenant condiviso (dopo, dietro StorageBackend).
 - **C. Sicurezza segreti**: oggi token in chiaro in config/yaml. Vault/secret manager, cifratura a riposo, niente key nel repo.
 - **D. API pubblica**: REST/WebSocket documentata (OpenAPI) → UI, integrazioni, eventuale app mobile.
 - **E. Canali oltre Telegram**: WhatsApp, web chat, Matrix, Discord — astrarre il layer "messaging" come i provider LLM.

@@ -163,9 +163,10 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `.env.example`: LARIA_JWT_SECRET/TOKEN_TTL/ADMIN_USER/ADMIN_PASSWORD.
 - **FATTO Telegram allowlist**: `handle_update` risolve `chat_id`→user via `identity.get_user_by_telegram`; chat non linkata → rifiuto ("not linked"), nessun accesso; chat linkata → engine sotto `user["id"]` (Telegram condivide identità/memoria col login web). Binding manuale via `identity.link_telegram` (admin). 4 test aggiornati. 110 verdi.
 - Scope memoria/conversazioni: già isolato per user_id (dal token web / dall'utente linkato Telegram). household="default" (single-household).
-- Resta auth: pannello admin gestione utenti/profili/tutele; reset password via Telegram (temp-pass); enforcement tutela quando si registrano dati per un profilo dipendente.
+- **FATTO admin API** (owner-only, `web/app.py`): GET /api/admin/users (senza password_hash), GET/POST /api/admin/profiles, POST /api/admin/users, /users/reset-password, /users/link-telegram, /guardianships. Guard `_require_owner` → 403 se non owner, 401 se no token. `auth.create_user_account`/`reset_password` (hash + identity). `tests/test_web_admin.py`: 6 test (403 non-owner, 401 no-token, create profile+user+login, reset, guardianship+telegram link). Totale 116 verdi.
+- Resta auth: reset password via Telegram (temp-pass self-service); enforcement tutela quando un utente registra dati per un profilo dipendente (oggi finance/food sono household-shared, ok; il check tutela serve se in futuro si vincola la scrittura a un profilo).
 
-## Prossimo: admin utenti (CRUD via API), reset Telegram temp-pass, UI Angular
+## Prossimo: UI Angular (scaffold Ionic+Angular+Capacitor), poi WebSocket streaming
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.

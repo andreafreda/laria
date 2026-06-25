@@ -67,6 +67,20 @@ async def change_password(user_id: int, new_password: str) -> bool:
         user_id, hash_password(new_password), must_change=False)
 
 
+async def create_user_account(username: str, password: str, *, role: str = "adult",
+                              profile_id: int | None = None) -> int:
+    """Create a login with a hashed password (admin action). Returns the user id."""
+    return await identity.create_user(
+        username, hash_password(password), role=role, profile_id=profile_id)
+
+
+async def reset_password(user_id: int, new_password: str, *,
+                         must_change: bool = True) -> bool:
+    """Set a user's password as an admin; by default forces a change at next login."""
+    return await identity.set_password(
+        user_id, hash_password(new_password), must_change=must_change)
+
+
 async def ensure_owner(settings: Settings | None = None) -> bool:
     """Create the owner from the admin seed on first run, once.
 

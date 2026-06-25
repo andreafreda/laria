@@ -14,7 +14,7 @@ from aiohttp import web
 
 from .. import auth
 from ..ingest import bank_statements
-from ..storage import finance
+from ..storage import finance, identity
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +164,111 @@ async def _read_import_form(request: web.Request) -> tuple[str, bytes | None, st
     return account, content, filename
 
 
+# --------------------------------------------------------------------------- #
+# Admin (owner only): manage profiles, users, guardianships
+# --------------------------------------------------------------------------- #
+
+def _require_owner(request: web.Request) -> web.Response | None:
+    """Return a 403 response unless the caller is the owner, else None to proceed."""
+    if request[_USER].get("role") != "owner":
+        return web.json_response({"error": "owner role required"}, status=403)
+    return None
+
+
+def _public_user(user: dict) -> dict:
+    """A user dict safe to return over the API (without the password hash)."""
+    return {k: v for k, v in user.items() if k != "password_hash"}
+
+
+async def _admin_list_users(request: web.Request) -> web.Response:
+    """List all logins (without password hashes). Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    return web.json_response([_public_user(u) for u in await identity.list_users()])
+
+
+async def _admin_list_profiles(request: web.Request) -> web.Response:
+    """List all household profiles. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    return web.json_response(await identity.list_profiles())
+
+
+async def _admin_create_profile(request: web.Request) -> web.Response:
+    """Create a household member profile. Body: {name, is_dependent?}. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    data = await _json(request)
+    name = (data.get("name") or "").strip()
+    if not name:
+        return web.json_response({"error": "field 'name' is required"}, status=400)
+    profile_id = await identity.create_profile(name, bool(data.get("is_dependent", False)))
+    return web.json_response({"id": profile_id, "name": name})
+
+
+async def _admin_create_user(request: web.Request) -> web.Response:
+    """Create a login. Body: {username, password, role?, profile_id?}. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    data = await _json(request)
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    if not username or len(password) < 8:
+        return web.json_response(
+            {"error": "username and a password of at least 8 characters are required"},
+            status=400)
+    user_id = await auth.create_user_account(
+        username, password, role=data.get("role", "adult"),
+        profile_id=data.get("profile_id"))
+    return web.json_response({"id": user_id, "username": username})
+
+
+async def _admin_reset_password(request: web.Request) -> web.Response:
+    """Reset a user's password. Body: {user_id, new_password, must_change?}. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    data = await _json(request)
+    new_password = data.get("new_password") or ""
+    if not data.get("user_id") or len(new_password) < 8:
+        return web.json_response(
+            {"error": "user_id and a password of at least 8 characters are required"},
+            status=400)
+    await auth.reset_password(data["user_id"], new_password,
+                              must_change=bool(data.get("must_change", True)))
+    return web.json_response({"ok": True})
+
+
+async def _admin_link_telegram(request: web.Request) -> web.Response:
+    """Bind a Telegram chat to a user. Body: {user_id, chat_id}. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    data = await _json(request)
+    if not data.get("user_id") or not data.get("chat_id"):
+        return web.json_response({"error": "user_id and chat_id are required"}, status=400)
+    await identity.link_telegram(data["user_id"], str(data["chat_id"]))
+    return web.json_response({"ok": True})
+
+
+async def _admin_add_guardianship(request: web.Request) -> web.Response:
+    """Let a user act for a profile. Body: {guardian_user_id, profile_id}. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    data = await _json(request)
+    if not data.get("guardian_user_id") or not data.get("profile_id"):
+        return web.json_response(
+            {"error": "guardian_user_id and profile_id are required"}, status=400)
+    await identity.add_guardianship(data["guardian_user_id"], data["profile_id"])
+    return web.json_response({"ok": True})
+
+
+async def _json(request: web.Request) -> dict:
+    """Parse a JSON body, returning {} on an empty or invalid one."""
+    try:
+        return await request.json()
+    except (json.JSONDecodeError, ValueError):
+        return {}
+
+
 def create_app(engine) -> web.Application:
     """Build the aiohttp application around an engine.
 
@@ -177,4 +282,11 @@ def create_app(engine) -> web.Application:
     app.router.add_post("/api/auth/change-password", _change_password)
     app.router.add_post("/api/chat", _chat)
     app.router.add_post("/api/finance/import", _import_statement)
+    app.router.add_get("/api/admin/users", _admin_list_users)
+    app.router.add_get("/api/admin/profiles", _admin_list_profiles)
+    app.router.add_post("/api/admin/profiles", _admin_create_profile)
+    app.router.add_post("/api/admin/users", _admin_create_user)
+    app.router.add_post("/api/admin/users/reset-password", _admin_reset_password)
+    app.router.add_post("/api/admin/users/link-telegram", _admin_link_telegram)
+    app.router.add_post("/api/admin/guardianships", _admin_add_guardianship)
     return app
