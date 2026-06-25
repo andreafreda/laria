@@ -53,6 +53,16 @@ class MemorySettings:
 
 
 @dataclass(frozen=True)
+class AuthSettings:
+    """Authentication config. The JWT secret signs login tokens (set a strong
+    random value in production); the admin seed creates the owner on first run."""
+    jwt_secret: str = field(default_factory=lambda: _env("LARIA_JWT_SECRET"))
+    token_ttl_seconds: int = field(default_factory=lambda: _env_int("LARIA_TOKEN_TTL_SECONDS", 86400))
+    admin_user: str = field(default_factory=lambda: _env("LARIA_ADMIN_USER"))
+    admin_password: str = field(default_factory=lambda: _env("LARIA_ADMIN_PASSWORD"))
+
+
+@dataclass(frozen=True)
 class HASettings:
     """Optional Home Assistant integration. Disabled by default, the core
     runs fully without it."""
@@ -82,6 +92,7 @@ class Settings:
     usda_api_key: str = field(default_factory=lambda: _env("USDA_API_KEY", "DEMO_KEY"))
     llm: LLMSettings = field(default_factory=LLMSettings)
     memory: MemorySettings = field(default_factory=MemorySettings)
+    auth: AuthSettings = field(default_factory=AuthSettings)
     ha: HASettings = field(default_factory=HASettings)
 
 
