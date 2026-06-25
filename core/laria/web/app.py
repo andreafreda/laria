@@ -23,8 +23,10 @@ logger = logging.getLogger(__name__)
 ENGINE = web.AppKey("engine", object)
 # Request key holding the authenticated user's token claims.
 _USER = "user"
-# Routes reachable without a token; everything else needs authentication.
-_PUBLIC_PATHS = frozenset({"/health", "/api/auth/login"})
+# Routes the middleware lets through without a Bearer token. The WebSocket chat
+# authenticates itself from a query-string token, since browsers cannot set
+# headers on a WebSocket handshake.
+_PUBLIC_PATHS = frozenset({"/health", "/api/auth/login", "/api/chat/ws"})
 
 
 @web.middleware
@@ -111,6 +113,46 @@ async def _chat(request: web.Request) -> web.Response:
         logger.exception("chat failed for user %s", user_id)
         return web.json_response({"error": "internal error"}, status=500)
     return web.json_response({"reply": reply})
+
+
+async def _chat_ws(request: web.Request) -> web.WebSocketResponse | web.Response:
+    """Chat over a persistent WebSocket: send {text}, receive {reply}.
+
+    Authenticates from a ``?token=`` query parameter (a WebSocket handshake
+    cannot carry an Authorization header). Each text frame is one engine turn
+    under the token's user; replies and errors are sent back as JSON frames.
+    This is request/reply over a kept-open socket; token-by-token streaming is a
+    later addition that needs provider streaming support.
+    """
+    try:
+        claims = auth.verify_token(request.query.get("token", ""))
+    except auth.AuthError:
+        return web.json_response({"error": "authentication required"}, status=401)
+
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    engine = request.app[ENGINE]
+    user_id = str(claims["sub"])
+
+    async for frame in ws:
+        if frame.type is not web.WSMsgType.TEXT:
+            continue
+        try:
+            text = (json.loads(frame.data).get("text") or "").strip()
+        except (json.JSONDecodeError, ValueError, AttributeError):
+            await ws.send_json({"error": "invalid message"})
+            continue
+        if not text:
+            await ws.send_json({"error": "field 'text' is required"})
+            continue
+        try:
+            reply = await engine.chat(user_id, text, {})
+        except Exception:
+            logger.exception("ws chat failed for user %s", user_id)
+            await ws.send_json({"error": "internal error"})
+            continue
+        await ws.send_json({"reply": reply})
+    return ws
 
 
 async def _import_statement(request: web.Request) -> web.Response:
@@ -318,6 +360,7 @@ def create_app(engine) -> web.Application:
     app.router.add_post("/api/auth/login", _login)
     app.router.add_post("/api/auth/change-password", _change_password)
     app.router.add_post("/api/chat", _chat)
+    app.router.add_get("/api/chat/ws", _chat_ws)
     app.router.add_post("/api/finance/import", _import_statement)
     app.router.add_get("/api/finance/balances", _finance_balances)
     app.router.add_get("/api/finance/summary", _finance_summary)
