@@ -5,7 +5,7 @@ import {
   IonListHeader, IonItem, IonLabel, IonIcon, IonMenuToggle,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { chatbubbleOutline, walletOutline, peopleOutline, logOutOutline } from 'ionicons/icons';
+import { chatbubbleOutline, walletOutline, restaurantOutline, peopleOutline, logOutOutline } from 'ionicons/icons';
 import { AuthService } from './core/auth.service';
 
 /** App shell: a side menu for navigation around a routed outlet. The menu shows
@@ -34,6 +34,10 @@ import { AuthService } from './core/auth.service';
                     <ion-icon slot="start" name="wallet-outline"></ion-icon>
                     <ion-label>Finance</ion-label>
                   </ion-item>
+                  <ion-item routerLink="/food" detail="false">
+                    <ion-icon slot="start" name="restaurant-outline"></ion-icon>
+                    <ion-label>Food</ion-label>
+                  </ion-item>
                   @if (auth.isOwner()) {
                     <ion-item routerLink="/admin" detail="false">
                       <ion-icon slot="start" name="people-outline"></ion-icon>
@@ -59,7 +63,7 @@ export class AppComponent {
   private readonly router = inject(Router);
 
   constructor() {
-    addIcons({ chatbubbleOutline, walletOutline, peopleOutline, logOutOutline });
+    addIcons({ chatbubbleOutline, walletOutline, restaurantOutline, peopleOutline, logOutOutline });
   }
 
   logout(): void {

@@ -24,6 +24,11 @@ export const routes: Routes = [
       import('./pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
   },
   {
+    path: 'food',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/food/food.page').then((m) => m.FoodPage),
+  },
+  {
     path: 'import',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/import/import.page').then((m) => m.ImportPage),

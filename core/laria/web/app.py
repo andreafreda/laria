@@ -10,13 +10,14 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import date
+from datetime import date, timedelta
 
 from aiohttp import web
 
 from .. import auth
 from ..ingest import bank_statements
-from ..storage import finance, identity
+from ..services.macros import compute_macro_targets
+from ..storage import finance, food, identity
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +261,87 @@ async def _finance_category_year(request: web.Request) -> web.Response:
 
 
 # --------------------------------------------------------------------------- #
+# Food: meal plan, diary, profiles, shopping, pantry
+# --------------------------------------------------------------------------- #
+
+async def _food_plan(request: web.Request) -> web.Response:
+    """Planned meals for a date range. Query: date_from, date_to (default this week)."""
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    date_from = request.query.get("date_from", monday.isoformat())
+    date_to = request.query.get("date_to", (monday + timedelta(days=6)).isoformat())
+    return web.json_response(await food.get_meal_plan(date_from, date_to))
+
+
+async def _food_diary(request: web.Request) -> web.Response:
+    """Each member's meals and nutrition for a day. Query: date (default today).
+
+    For every member with a meal that day, returns the day's totals, hydration,
+    calorie target and derived macro targets, and the meals themselves, so the
+    page renders a full picture without further requests.
+    """
+    day = request.query.get("date", date.today().isoformat())
+    members = await food.list_members_with_meals(day)
+    entries = []
+    for member in members:
+        profile = await food.get_profile(member)
+        kcal_target = profile.get("kcal_target") if profile else None
+        entries.append({
+            "member": member,
+            "totals": await food.get_day_totals(member, day),
+            "hydration": await food.get_hydration_day(member, day),
+            "kcal_target": kcal_target,
+            "macro_targets": compute_macro_targets(
+                kcal_target, profile.get("weight_kg") if profile else None),
+            "meals": await food.get_meals(member, f"{day} 00:00:00", f"{day} 23:59:59"),
+        })
+    return web.json_response({"date": day, "members": entries})
+
+
+async def _food_profiles(request: web.Request) -> web.Response:
+    """Family nutrition profiles, each with derived macro targets."""
+    profiles = await food.list_profiles()
+    for profile in profiles:
+        profile["macro_targets"] = compute_macro_targets(
+            profile.get("kcal_target"), profile.get("weight_kg"))
+    return web.json_response(profiles)
+
+
+async def _food_weight(request: web.Request) -> web.Response:
+    """Weight history for a member. Query: member (required)."""
+    member = request.query.get("member", "")
+    if not member:
+        return web.json_response({"error": "member is required"}, status=400)
+    return web.json_response(await food.get_weight_history(member))
+
+
+async def _food_shopping(request: web.Request) -> web.Response:
+    """The shopping list (including checked items) plus the estimated cost."""
+    return web.json_response({
+        "items": await food.get_shopping_list(include_checked=True),
+        "cost": await food.get_shopping_cost(include_checked=True),
+    })
+
+
+async def _food_shopping_toggle(request: web.Request) -> web.Response:
+    """Toggle one shopping item checked/unchecked. Body: {id}."""
+    try:
+        data = await request.json()
+        toggled = await food.toggle_shopping_item(int(data["id"]))
+    except (ValueError, KeyError, TypeError):
+        return web.json_response({"error": "invalid request"}, status=400)
+    return web.json_response({"ok": toggled})
+
+
+async def _food_pantry(request: web.Request) -> web.Response:
+    """Pantry stock plus the items expiring within three days."""
+    return web.json_response({
+        "items": await food.get_pantry(),
+        "expiring": await food.get_pantry_expiring(3),
+    })
+
+
+# --------------------------------------------------------------------------- #
 # Admin (owner only): manage profiles, users, guardianships
 # --------------------------------------------------------------------------- #
 
@@ -385,6 +467,13 @@ def create_app(engine) -> web.Application:
     app.router.add_get("/api/finance/goals", _finance_goals)
     app.router.add_get("/api/finance/trend", _finance_trend)
     app.router.add_get("/api/finance/category-year", _finance_category_year)
+    app.router.add_get("/api/food/plan", _food_plan)
+    app.router.add_get("/api/food/diary", _food_diary)
+    app.router.add_get("/api/food/profiles", _food_profiles)
+    app.router.add_get("/api/food/weight", _food_weight)
+    app.router.add_get("/api/food/shopping", _food_shopping)
+    app.router.add_post("/api/food/shopping/toggle", _food_shopping_toggle)
+    app.router.add_get("/api/food/pantry", _food_pantry)
     app.router.add_get("/api/admin/users", _admin_list_users)
     app.router.add_get("/api/admin/profiles", _admin_list_profiles)
     app.router.add_post("/api/admin/profiles", _admin_create_profile)
