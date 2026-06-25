@@ -63,6 +63,11 @@ class HASettings:
     mqtt_port: int = field(default_factory=lambda: _env_int("MQTT_PORT", 1883))
     mqtt_username: str = field(default_factory=lambda: _env("MQTT_USERNAME"))
     mqtt_password: str = field(default_factory=lambda: _env("MQTT_PASSWORD"))
+    # HA's MQTT discovery root (must match HA's config; the standard is
+    # "homeassistant"). The node id namespaces LARIA's entities so they never
+    # collide with another publisher (e.g. HARIA) on the same broker.
+    mqtt_discovery_prefix: str = field(default_factory=lambda: _env("MQTT_DISCOVERY_PREFIX", "homeassistant"))
+    mqtt_node_id: str = field(default_factory=lambda: _env("MQTT_NODE_ID", "laria"))
 
 
 @dataclass(frozen=True)

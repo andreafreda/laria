@@ -148,7 +148,13 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_channel_telegram.py`: 3 test (text→chat+reply, update non-message ignorato, testo vuoto ignorato). Totale 82 verdi.
 - 2 canali ora sullo stesso engine (web + telegram), entrambi via `build_engine`.
 
-## Prossimo: UI Angular, WebSocket streaming, MQTT mirror, immagine combinata UI
+## FATTO — MQTT mirror (connector-ha)
+- `connectors/ha/mqtt.py`: mirror dati finance→sensori HA via MQTT discovery. Builder PURI: `slugify`, `Sensor`, `discovery_payload` (config+state topic, unique_id/object_id namespaced), `balance_sensors`/`goal_sensors`, `collect_finance_sensors`. `MqttMirror.publish` = IO paho-mqtt (lazy import, opzionale).
+- **Anti-conflitto HARIA**: namespacing via `MQTT_NODE_ID` (default `laria`) su unique_id/object_id/topic + device unico "LARIA". `MQTT_DISCOVERY_PREFIX` default "homeassistant". Coesistenza con HARIA garantita; off finché HA_ENABLED/MQTT non configurati.
+- `tests/test_connector_mqtt.py`: 4 test (slugify, payload namespaced, node_id custom, sensori balance/goal). Totale 86 verdi.
+- **POLICY conflitti HARIA** (vedi memoria): MQTT namespace laria_; Telegram bot SEPARATO (token diverso, altrimenti i poller si rubano gli update); addon/DB nessun conflitto (LARIA è Docker, sqlite proprio). HARIA resta acceso, LARIA coesiste.
+
+## Prossimo: UI Angular, WebSocket streaming, subscribe_events, immagine combinata UI
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.

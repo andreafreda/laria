@@ -7,6 +7,7 @@ control devices on any reachable Home Assistant.
 from __future__ import annotations
 
 from .client import HaClient
+from .mqtt import MqttMirror, collect_finance_sensors
 from .tools import register_ha_tools
 
-__all__ = ["HaClient", "register_ha_tools"]
+__all__ = ["HaClient", "register_ha_tools", "MqttMirror", "collect_finance_sensors"]
