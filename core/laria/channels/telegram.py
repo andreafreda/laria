@@ -17,7 +17,10 @@ from .. import auth
 from ..app import build_engine
 from ..config import get_settings
 from ..engine import Engine
-from ..storage import identity, init_db
+from ..llm import get_provider
+from ..scheduler import Scheduler
+from ..storage import identity, init_db, misc
+from .notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -101,30 +104,43 @@ async def _handle_command(text: str, user: dict, client: TelegramClient,
     return True
 
 
-async def run(engine: Engine, token: str) -> None:
+async def run(engine: Engine, client: TelegramClient) -> None:
     """Poll Telegram forever, handling each update. Advances the offset so each
-    update is processed once."""
+    update is processed once. The caller owns the client's HTTP session, so the
+    same client can also be used for proactive sends."""
     offset = 0
-    async with aiohttp.ClientSession() as session:
-        client = TelegramClient(token, session)
-        logger.info("Telegram channel started")
-        while True:
+    logger.info("Telegram channel started")
+    while True:
+        try:
+            updates = await client.get_updates(offset)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as error:
+            logger.warning("Telegram poll failed, retrying: %s", error)
+            await asyncio.sleep(3)
+            continue
+        for update in updates:
+            offset = update["update_id"] + 1
             try:
-                updates = await client.get_updates(offset)
-            except (aiohttp.ClientError, asyncio.TimeoutError) as error:
-                logger.warning("Telegram poll failed, retrying: %s", error)
-                await asyncio.sleep(3)
-                continue
-            for update in updates:
-                offset = update["update_id"] + 1
-                try:
-                    await handle_update(update, engine, client)
-                except Exception:
-                    logger.exception("failed to handle update %s", update.get("update_id"))
+                await handle_update(update, engine, client)
+            except Exception:
+                logger.exception("failed to handle update %s", update.get("update_id"))
+
+
+async def _load_scheduled_jobs(scheduler: Scheduler) -> None:
+    """Queue every active reminder and briefing so they fire after a restart."""
+    for reminder in await misc.get_active_reminders():
+        scheduler.schedule_reminder(reminder)
+    for briefing in await misc.get_active_briefings():
+        scheduler.schedule_briefing(briefing)
 
 
 def serve() -> None:
-    """Entry point: build the engine and run the Telegram poller."""
+    """Entry point: run the Telegram bot with proactive scheduling.
+
+    Builds the engine wired to a scheduler so reminders and briefings created in
+    chat fire live, reloads any jobs saved from previous runs, then polls for
+    messages. The Telegram client's HTTP session is shared between the poller and
+    the proactive notifier.
+    """
     settings = get_settings()
     logging.basicConfig(level=settings.log_level.upper())
     if not settings.telegram_token:
@@ -132,7 +148,14 @@ def serve() -> None:
 
     async def _main() -> None:
         await init_db()
-        await run(build_engine(settings), settings.telegram_token)
+        async with aiohttp.ClientSession() as session:
+            client = TelegramClient(settings.telegram_token, session)
+            notifier = TelegramNotifier(client, get_provider(settings))
+            scheduler = Scheduler(notifier.fire_reminder, notifier.fire_briefing)
+            engine = build_engine(settings, scheduler=scheduler)
+            scheduler.start()
+            await _load_scheduled_jobs(scheduler)
+            await run(engine, client)
 
     asyncio.run(_main())
 
