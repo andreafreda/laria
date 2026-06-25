@@ -9,6 +9,7 @@ import logging
 
 from aiohttp import web
 
+from .. import auth
 from ..app import build_engine
 from ..config import get_settings
 from ..storage import init_db
@@ -16,8 +17,9 @@ from .app import create_app
 
 
 async def _on_startup(app: web.Application) -> None:
-    """Create the database schema before the first request is served."""
+    """Prepare the database and create the owner from the admin seed (first run)."""
     await init_db()
+    await auth.ensure_owner()
 
 
 def serve() -> None:

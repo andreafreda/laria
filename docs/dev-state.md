@@ -154,7 +154,16 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - `tests/test_connector_mqtt.py`: 4 test (slugify, payload namespaced, node_id custom, sensori balance/goal). Totale 86 verdi.
 - **POLICY conflitti HARIA** (vedi memoria): MQTT namespace laria_; Telegram bot SEPARATO (token diverso, altrimenti i poller si rubano gli update); addon/DB nessun conflitto (LARIA è Docker, sqlite proprio). HARIA resta acceso, LARIA coesiste.
 
-## Prossimo: UI Angular, WebSocket streaming, subscribe_events, immagine combinata UI
+## FATTO — AUTH (incrementi 1-4, vedi design-auth.md)
+- `security/passwords.py`: hash pbkdf2-sha256 stdlib (salt, self-describing), verify constant-time. `security/tokens.py`: JWT HS256 stdlib (encode/decode, iat/exp, TokenError). 8 test puri.
+- `storage/identity.py` + schema: `profiles` (membri, data subject) / `users` (login opzionale su profilo, role, telegram_chat_id, must_change) / `guardianships` (tutore→profilo). CRUD + count_users. 5 test.
+- `config.py`: `AuthSettings` (jwt_secret, token_ttl, admin_user/password seed).
+- `auth/service.py`: authenticate (verifica cred→token, stesso errore per user ignoto/pwd errata), issue/verify_token (AuthError), change_password, ensure_owner (seed owner al primo run, idempotente). 5 test.
+- `web/app.py`: middleware Bearer obbligatorio (public: /health, /api/auth/login), `/api/auth/login`→{token,must_change}, `/api/auth/change-password`, `/api/chat` ricava user_id dal **token** (non dal body), import protetto. `server.py` startup: init_db + ensure_owner. Test web aggiornati (chat/import richiedono token) + `test_web_auth.py`. Totale 109 verdi.
+- `.env.example`: LARIA_JWT_SECRET/TOKEN_TTL/ADMIN_USER/ADMIN_PASSWORD.
+- Resta auth: pannello admin gestione utenti/profili/tutele; Telegram allowlist + reset temp-pass; enforcement scope per-profilo nei dati personali (memoria/conversazioni) e tutela.
+
+## Prossimo: admin utenti, Telegram allowlist+reset, scope enforcement, UI Angular
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
