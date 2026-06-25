@@ -16,8 +16,9 @@ from aiohttp import web
 
 from .. import auth
 from ..ingest import bank_statements
+from ..modules.news import _dump_topics, _parse_topics
 from ..services.macros import compute_macro_targets
-from ..storage import finance, food, identity
+from ..storage import finance, food, identity, misc
 
 logger = logging.getLogger(__name__)
 
@@ -342,6 +343,64 @@ async def _food_pantry(request: web.Request) -> web.Response:
 
 
 # --------------------------------------------------------------------------- #
+# News briefings (per user) and system error log
+# --------------------------------------------------------------------------- #
+
+async def _news_briefings(request: web.Request) -> web.Response:
+    """The current user's briefings, with topics parsed into structured form."""
+    user_id = str(request[_USER]["sub"])
+    briefings = await misc.get_user_briefings(user_id)
+    for briefing in briefings:
+        briefing["topics"] = _parse_topics(briefing["topics"])
+    return web.json_response(briefings)
+
+
+async def _news_create_briefing(request: web.Request) -> web.Response:
+    """Create a briefing for the current user. Body: {topics, cron, num_news?}.
+
+    Created here it is stored but not scheduled live, since the web process has no
+    scheduler; the Telegram process schedules it the next time it loads active
+    briefings.
+    """
+    user_id = str(request[_USER]["sub"])
+    try:
+        data = await request.json()
+        topics = _dump_topics(data["topics"])
+        cron = str(data["cron"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "topics and cron are required"}, status=400)
+    if not cron:
+        return web.json_response({"error": "cron is required"}, status=400)
+    briefing = await misc.add_briefing(user_id, topics, cron, int(data.get("num_news") or 5))
+    return web.json_response(briefing)
+
+
+async def _news_delete_briefing(request: web.Request) -> web.Response:
+    """Delete one of the current user's briefings. Body: {id}."""
+    user_id = str(request[_USER]["sub"])
+    try:
+        briefing_id = int((await request.json())["id"])
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "id is required"}, status=400)
+    deleted = await misc.deactivate_briefing(briefing_id, user_id)
+    return web.json_response({"ok": deleted})
+
+
+async def _system_logs(request: web.Request) -> web.Response:
+    """Recent captured errors. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    return web.json_response(await misc.get_error_logs(200))
+
+
+async def _system_logs_clear(request: web.Request) -> web.Response:
+    """Clear the error log. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    return web.json_response({"deleted": await misc.clear_error_logs()})
+
+
+# --------------------------------------------------------------------------- #
 # Admin (owner only): manage profiles, users, guardianships
 # --------------------------------------------------------------------------- #
 
@@ -474,6 +533,11 @@ def create_app(engine) -> web.Application:
     app.router.add_get("/api/food/shopping", _food_shopping)
     app.router.add_post("/api/food/shopping/toggle", _food_shopping_toggle)
     app.router.add_get("/api/food/pantry", _food_pantry)
+    app.router.add_get("/api/news/briefings", _news_briefings)
+    app.router.add_post("/api/news/briefings", _news_create_briefing)
+    app.router.add_post("/api/news/briefings/delete", _news_delete_briefing)
+    app.router.add_get("/api/system/logs", _system_logs)
+    app.router.add_post("/api/system/logs/clear", _system_logs_clear)
     app.router.add_get("/api/admin/users", _admin_list_users)
     app.router.add_get("/api/admin/profiles", _admin_list_profiles)
     app.router.add_post("/api/admin/profiles", _admin_create_profile)
