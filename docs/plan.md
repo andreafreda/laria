@@ -23,12 +23,12 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [x] **Convenzione codice**: skill `/codecraft` (repo `.claude/skills/`, globale, pubblicata su `andreafreda/skills`) project-agnostic: leggibilità umana, SOLID con giudizio, no code smell, docstring human-oriented, niente trattini come punteggiatura in prosa.
 - [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite a quel punto: 46 test verdi (ora 116).
 - [x] **Auth** (vedi `design-auth.md`): hash pbkdf2 + JWT, profiles/users/guardianships, login + change-password, middleware Bearer, /api/chat da token, Telegram allowlist, admin API owner-only, owner seed. Resta solo: reset Telegram self-service.
-- [~] Canali: **web API JSON** (auth, /api/chat, /api/finance/import, /api/auth/*, /api/admin/*) + **Telegram** (allowlist). Resta: WebSocket streaming.
-- [~] connector-ha: **client REST/WS + tool HA + MQTT mirror fatti** (`core/laria/connectors/ha/`: HaClient con DI; tool get_house_state/control_device/speak_alexa; `mqtt.py` mirror finance→sensori HA discovery, namespacing `MQTT_NODE_ID` default `laria` per coesistere con HARIA, paho-mqtt opzionale lazy). Restano: subscribe_events, calendar tools.
+- [x] Canali: **web API JSON** (auth, /api/chat, /api/chat/ws WebSocket, /api/finance/* read-model, /api/finance/import, /api/auth/*, /api/admin/*) + **Telegram** (allowlist + /reset). WebSocket = request/reply persistente (streaming token-by-token rimandato, serve provider streaming).
+- [x] connector-ha: **client REST/WS + tool HA + MQTT mirror + calendar tools**. subscribe_events RIMANDATO di proposito (senza un reaction-engine sarebbe codice morto; lo si fa col layer reazioni).
 - [ ] UI Angular (incl. dashboard configurazione LLM).
 - [~] Docker: **immagine core fatta** (`docker/Dockerfile` python-slim non-root + healthcheck, `docker/compose.yaml` con volume dati, `.dockerignore`; `python -m laria.web`). Build non ancora verificata in locale (Docker Desktop engine spento). Resta: immagine combinata con UI.
 - [x] **Consolidamento backend**: CI GitHub Actions (pytest 3.11/3.12 offline), `.env.example` completo, smoke test composition root, README quickstart. **Suite attuale: 116 test verdi**.
-- [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).
+- [x] Traduzione prompt/stringhe model-facing IT→EN: di fatto completa (prompt e tool LARIA scritti EN da subito). L'unico italiano residuo è in `ingest/bank_statements.py` = header dei file estratto banca italiani da matchare (voluto, non prompt).
 - [ ] **Memoria agente**: fase 1 = **mem0 dietro wrapper nostro `MemoryBackend`** (plug&play); improvement = motore proprio L0-L3 dopo. Vedi `design-memory.md` §6bis + `memory-engine-handoff.md`.
 
 ## Lingua

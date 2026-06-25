@@ -166,7 +166,17 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - **FATTO admin API** (owner-only, `web/app.py`): GET /api/admin/users (senza password_hash), GET/POST /api/admin/profiles, POST /api/admin/users, /users/reset-password, /users/link-telegram, /guardianships. Guard `_require_owner` → 403 se non owner, 401 se no token. `auth.create_user_account`/`reset_password` (hash + identity). `tests/test_web_admin.py`: 6 test (403 non-owner, 401 no-token, create profile+user+login, reset, guardianship+telegram link). Totale 116 verdi.
 - Resta auth: reset password via Telegram (temp-pass self-service); enforcement tutela quando un utente registra dati per un profilo dipendente (oggi finance/food sono household-shared, ok; il check tutela serve se in futuro si vincola la scrittura a un profilo).
 
-## Prossimo: UI Angular (scaffold Ionic+Angular+Capacitor), poi WebSocket streaming
+## FATTO — chiusura parziali (read-model, calendar, telegram reset, websocket, prompt)
+- **Read-model finance** GET: /api/finance/balances /summary /matrix /budget-status /goals (autenticati). Per le dashboard, senza MQTT. `test_web_finance.py` (4).
+- **Calendar tools** connector-ha: list_calendar_events + create_calendar_event. `test_connector_ha.py` esteso.
+- **Reset Telegram** `/reset` su chat linkata → temp-pass + must_change. `test_channel_telegram.py` (5).
+- **WebSocket** GET /api/chat/ws: request/reply persistente, auth da `?token=`. `test_web_ws.py` (3). NB: streaming token-by-token rimandato (serve provider.generate_stream + rework loop respond).
+- **Prompt translation**: già EN (niente da tradurre; italiano residuo solo negli header bank-statement, voluto).
+- **subscribe_events**: RIMANDATO (codice morto senza reaction-engine).
+- **Docker immagine con UI**: bloccato sulla UI (non esiste ancora).
+- Suite: **126 test verdi**.
+
+## Prossimo: UI Angular (scaffold Ionic+Angular+Capacitor)
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
