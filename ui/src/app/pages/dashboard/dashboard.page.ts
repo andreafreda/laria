@@ -1,13 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import {
-  IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
+  IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonMenuButton,
   IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonList, IonItem,
-  IonLabel, IonProgressBar, IonIcon,
+  IonLabel, IonProgressBar,
 } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import { chatbubbleOutline } from 'ionicons/icons';
 import { Balance, ExpenseSummary, FinanceService, Goal } from '../../core/finance.service';
 
 /** Finance overview: account balances, this period's income vs expenses, and
@@ -16,19 +13,15 @@ import { Balance, ExpenseSummary, FinanceService, Goal } from '../../core/financ
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    DecimalPipe, RouterLink, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons,
-    IonButton, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonList,
-    IonItem, IonLabel, IonProgressBar, IonIcon,
+    DecimalPipe, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons,
+    IonMenuButton, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonList,
+    IonItem, IonLabel, IonProgressBar,
   ],
   template: `
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start"><ion-menu-button></ion-menu-button></ion-buttons>
         <ion-title>Finance</ion-title>
-        <ion-buttons slot="end">
-          <ion-button routerLink="/chat" aria-label="Open chat">
-            <ion-icon slot="icon-only" name="chatbubble-outline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -89,10 +82,6 @@ export class DashboardPage implements OnInit {
   readonly balances = signal<Balance[]>([]);
   readonly summary = signal<ExpenseSummary | null>(null);
   readonly goals = signal<Goal[]>([]);
-
-  constructor() {
-    addIcons({ chatbubbleOutline });
-  }
 
   ngOnInit(): void {
     this.finance.balances().subscribe((b) => this.balances.set(b));

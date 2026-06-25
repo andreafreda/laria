@@ -23,6 +23,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
   },
+  {
+    path: 'admin',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/admin/admin.page').then((m) => m.AdminPage),
+  },
   { path: '', redirectTo: 'chat', pathMatch: 'full' },
   { path: '**', redirectTo: 'chat' },
 ];

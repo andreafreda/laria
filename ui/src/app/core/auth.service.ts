@@ -28,6 +28,8 @@ export class AuthService {
   readonly token = this._token.asReadonly();
   readonly mustChange = this._mustChange.asReadonly();
   readonly isAuthenticated = computed(() => this._token() !== null);
+  readonly role = computed(() => this.claims()['role'] as string | undefined);
+  readonly isOwner = computed(() => this.role() === 'owner');
 
   /** Exchange credentials for a token and remember the session. */
   login(username: string, password: string): Observable<LoginResponse> {
@@ -47,6 +49,21 @@ export class AuthService {
     localStorage.removeItem(TOKEN_KEY);
     this._token.set(null);
     this._mustChange.set(false);
+  }
+
+  /** Decode the token's claims (role, username, ...) without verifying the
+   *  signature; the server is the source of truth, this only drives the UI. */
+  private claims(): Record<string, unknown> {
+    const token = this._token();
+    if (!token) {
+      return {};
+    }
+    try {
+      const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(payload));
+    } catch {
+      return {};
+    }
   }
 
   private startSession(token: string, mustChange: boolean): void {

@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
-  IonFooter, IonInput, IonIcon,
+  IonFooter, IonInput, IonIcon, IonMenuButton,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { logOutOutline, send } from 'ionicons/icons';
@@ -22,11 +22,12 @@ interface Message {
   standalone: true,
   imports: [
     FormsModule, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons,
-    IonButton, IonFooter, IonInput, IonIcon,
+    IonButton, IonFooter, IonInput, IonIcon, IonMenuButton,
   ],
   template: `
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start"><ion-menu-button></ion-menu-button></ion-buttons>
         <ion-title>LARIA</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="logout()" aria-label="Sign out">
