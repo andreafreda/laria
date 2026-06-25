@@ -31,6 +31,11 @@ class StubHaClient:
         self.service_calls.append((domain, service, data))
         return {"ok": True}
 
+    async def get_calendar_events(self, calendar, start, end):
+        if self.fail:
+            raise ConnectionError("unreachable")
+        return [{"summary": "Dentist", "start": start, "end": end}]
+
 
 def _ctx() -> ToolContext:
     return ToolContext(user_id="u1", memory=FakeBackend(), scope=Scope(user_id="u1"))
@@ -44,7 +49,27 @@ def _registry(client) -> ToolRegistry:
 
 async def test_ha_tools_registered():
     names = {s["name"] for s in _registry(StubHaClient()).schemas()}
-    assert names == {"get_house_state", "control_device", "speak_alexa"}
+    assert {"get_house_state", "control_device", "speak_alexa",
+            "list_calendar_events", "create_calendar_event"} <= names
+
+
+async def test_list_calendar_events():
+    client = StubHaClient()
+    result = await _registry(client).dispatch("list_calendar_events", {
+        "calendar": "calendar.family", "start": "2026-01-01T00:00:00",
+        "end": "2026-01-31T23:59:59"}, _ctx())
+    events = json.loads(result)
+    assert events[0]["summary"] == "Dentist"
+
+
+async def test_create_calendar_event():
+    client = StubHaClient()
+    await _registry(client).dispatch("create_calendar_event", {
+        "calendar": "calendar.family", "summary": "Lunch",
+        "start": "2026-01-05T12:00:00", "end": "2026-01-05T13:00:00"}, _ctx())
+    domain, service, data = client.service_calls[0]
+    assert (domain, service) == ("calendar", "create_event")
+    assert data["summary"] == "Lunch"
 
 
 async def test_discovery_lists_entities():

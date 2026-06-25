@@ -104,6 +104,61 @@ def register_ha_tools(registry: ToolRegistry, client: HaClient) -> None:
         },
         handler=control_device,
     ))
+    async def list_calendar_events(inputs: dict[str, Any], ctx: ToolContext) -> str:
+        """List a calendar's events in a date range (ISO datetimes)."""
+        try:
+            events = await client.get_calendar_events(
+                inputs["calendar"], inputs["start"], inputs["end"])
+        except _REACHABILITY_ERRORS as error:
+            return f"Home Assistant error: {error}"
+        return json.dumps(events, ensure_ascii=False)
+
+    async def create_calendar_event(inputs: dict[str, Any], ctx: ToolContext) -> str:
+        """Add an event to a calendar via the calendar.create_event service."""
+        data = {
+            "entity_id": inputs["calendar"],
+            "summary": inputs["summary"],
+            "start_date_time": inputs["start"],
+            "end_date_time": inputs["end"],
+        }
+        if inputs.get("description"):
+            data["description"] = inputs["description"]
+        try:
+            await client.call_service("calendar", "create_event", data)
+        except _REACHABILITY_ERRORS as error:
+            return f"Home Assistant error: {error}"
+        return json.dumps({"ok": True, "calendar": inputs["calendar"]})
+
+    registry.register(Tool(
+        name="list_calendar_events",
+        description="List events of a Home Assistant calendar between two ISO datetimes.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "calendar": {"type": "string", "description": "Calendar entity_id (e.g. calendar.family)"},
+                "start": {"type": "string", "description": "Start ISO datetime"},
+                "end": {"type": "string", "description": "End ISO datetime"},
+            },
+            "required": ["calendar", "start", "end"],
+        },
+        handler=list_calendar_events,
+    ))
+    registry.register(Tool(
+        name="create_calendar_event",
+        description="Add an event to a Home Assistant calendar (ISO start/end datetimes).",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "calendar": {"type": "string", "description": "Calendar entity_id"},
+                "summary": {"type": "string", "description": "Event title"},
+                "start": {"type": "string", "description": "Start ISO datetime"},
+                "end": {"type": "string", "description": "End ISO datetime"},
+                "description": {"type": "string", "description": "Optional details"},
+            },
+            "required": ["calendar", "summary", "start", "end"],
+        },
+        handler=create_calendar_event,
+    ))
     registry.register(Tool(
         name="speak_alexa",
         description=("Say a message aloud on an Alexa/Echo device. Use the Echo "
