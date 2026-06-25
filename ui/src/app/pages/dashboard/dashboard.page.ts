@@ -1,10 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import {
   IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonMenuButton,
-  IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonList, IonItem,
-  IonLabel, IonProgressBar,
+  IonButton, IonIcon, IonCard, IonCardHeader, IonCardTitle, IonCardContent,
+  IonList, IonItem, IonLabel, IonProgressBar,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { cloudUploadOutline } from 'ionicons/icons';
 import { Balance, ExpenseSummary, FinanceService, Goal } from '../../core/finance.service';
 
 /** Finance overview: account balances, this period's income vs expenses, and
@@ -13,15 +16,20 @@ import { Balance, ExpenseSummary, FinanceService, Goal } from '../../core/financ
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    DecimalPipe, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons,
-    IonMenuButton, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonList,
-    IonItem, IonLabel, IonProgressBar,
+    DecimalPipe, RouterLink, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons,
+    IonMenuButton, IonButton, IonIcon, IonCard, IonCardHeader, IonCardTitle,
+    IonCardContent, IonList, IonItem, IonLabel, IonProgressBar,
   ],
   template: `
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start"><ion-menu-button></ion-menu-button></ion-buttons>
         <ion-title>Finance</ion-title>
+        <ion-buttons slot="end">
+          <ion-button routerLink="/import" aria-label="Import statement">
+            <ion-icon slot="icon-only" name="cloud-upload-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -104,6 +112,10 @@ export class DashboardPage implements OnInit {
   readonly summary = signal<ExpenseSummary | null>(null);
   readonly goals = signal<Goal[]>([]);
   readonly categories = signal<{ category: string; amount: number; pct: number }[]>([]);
+
+  constructor() {
+    addIcons({ cloudUploadOutline });
+  }
 
   ngOnInit(): void {
     this.finance.balances().subscribe((b) => this.balances.set(b));

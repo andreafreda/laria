@@ -44,4 +44,19 @@ export class FinanceService {
   goals(): Observable<Goal[]> {
     return this.http.get<Goal[]>(`${this.base}/api/finance/goals`);
   }
+
+  /** Upload a bank-statement file to import its movements into an account. */
+  importStatement(account: string, file: File): Observable<ImportResult> {
+    const form = new FormData();
+    form.append('account', account);
+    form.append('file', file, file.name);
+    return this.http.post<ImportResult>(`${this.base}/api/finance/import`, form);
+  }
+}
+
+export interface ImportResult {
+  inserted: number;
+  duplicates: number;
+  total: number;
+  format: string;
 }
