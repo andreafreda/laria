@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 
 from aiohttp import web
 
@@ -165,6 +166,42 @@ async def _read_import_form(request: web.Request) -> tuple[str, bytes | None, st
 
 
 # --------------------------------------------------------------------------- #
+# Finance read models (for the dashboards)
+# --------------------------------------------------------------------------- #
+
+async def _finance_balances(request: web.Request) -> web.Response:
+    """Current balance of every active account."""
+    return web.json_response(await finance.get_balances())
+
+
+async def _finance_summary(request: web.Request) -> web.Response:
+    """Income/expenses/net + per-category breakdown. Query: date_from, date_to."""
+    return web.json_response(await finance.expense_summary(
+        date_from=request.query.get("date_from"),
+        date_to=request.query.get("date_to")))
+
+
+async def _finance_matrix(request: web.Request) -> web.Response:
+    """Category x month spending matrix. Query: months (optional, default all)."""
+    months = request.query.get("months")
+    return web.json_response(await finance.monthly_category_matrix(
+        int(months) if months else None))
+
+
+async def _finance_budget_status(request: web.Request) -> web.Response:
+    """Budget tracking for a month. Query: year, month (default current)."""
+    today = date.today()
+    return web.json_response(await finance.get_budget_status(
+        int(request.query.get("year", today.year)),
+        int(request.query.get("month", today.month))))
+
+
+async def _finance_goals(request: web.Request) -> web.Response:
+    """Savings goals with progress."""
+    return web.json_response(await finance.get_goals())
+
+
+# --------------------------------------------------------------------------- #
 # Admin (owner only): manage profiles, users, guardianships
 # --------------------------------------------------------------------------- #
 
@@ -282,6 +319,11 @@ def create_app(engine) -> web.Application:
     app.router.add_post("/api/auth/change-password", _change_password)
     app.router.add_post("/api/chat", _chat)
     app.router.add_post("/api/finance/import", _import_statement)
+    app.router.add_get("/api/finance/balances", _finance_balances)
+    app.router.add_get("/api/finance/summary", _finance_summary)
+    app.router.add_get("/api/finance/matrix", _finance_matrix)
+    app.router.add_get("/api/finance/budget-status", _finance_budget_status)
+    app.router.add_get("/api/finance/goals", _finance_goals)
     app.router.add_get("/api/admin/users", _admin_list_users)
     app.router.add_get("/api/admin/profiles", _admin_list_profiles)
     app.router.add_post("/api/admin/profiles", _admin_create_profile)
