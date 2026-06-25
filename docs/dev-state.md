@@ -181,7 +181,16 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - Skill installate globali (per la UI): angular-developer, angular-new-app, ionic-angular, ionic-app-creation, ionic-app-development, ionic-expert, capacitor-angular, capacitor-app-creation, capacitor-app-development, capacitor-plugins, capacitor-expert, high-end-visual-design, design-taste-frontend, minimalist-ui, redesign-existing-projects, codecraft.
 - Pagine MVP: login (+ forced change se must_change), chat (REST ora, WS dopo), dashboard finance (balances/summary/matrix/budget/goals da /api/finance/*), config LLM, admin utenti/profili/tutele.
 
-## Prossimo: scaffold UI in `ui/` (ionic start Angular standalone) + servizio API + login
+## FATTO — UI (Ionic+Angular+Capacitor) MVP
+- Scaffold in `ui/` (Ionic Angular standalone + Capacitor). Build: `cd ui && npx ng build` (output `www/`).
+- `src/app/core/`: `AuthService` (JWT in localStorage via signals, decodifica role/isOwner), `auth.interceptor` (Bearer su /api/), `auth.guard`, `ChatService`, `FinanceService`, `AdminService`.
+- `src/app/pages/`: login (→ change-password se must_change), chat (POST /api/chat, bolle), change-password, dashboard (balances/summary/goals da /api/finance/*), admin (owner: lista+crea profili/utenti).
+- `app.component`: app-shell con side menu (Chat/Finance/Family[owner]/Sign out) + split-pane. Routes guardate. `main.ts`: provideHttpClient(interceptor).
+- Tema: `index.html` font Plus Jakarta Sans; `variables.scss` palette teal+amber, sfondo sand; `global.scss` card arrotondate/ombra.
+- **Core serve la UI**: `web/app.py._serve_ui` (da `LARIA_UI_DIR`, SPA fallback); middleware ora guarda solo `/api/`. Dockerfile multi-stage (node build UI + python serve) → immagine combinata su :8080.
+- Dev: API `python -m laria.web` (:8080) + UI `cd ui && npx ng serve` (:4200, punta a apiBaseUrl :8080). Prod/Docker: tutto su :8080.
+
+## Prossimo UI: pagina config LLM, grafici (matrix), consumo WebSocket streaming, build mobile Capacitor
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
