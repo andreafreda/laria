@@ -393,6 +393,10 @@ def _serve_ui(app: web.Application) -> None:
     ui_dir = os.environ.get("LARIA_UI_DIR")
     if not ui_dir or not os.path.isdir(ui_dir):
         return
+    # Normalize so the path-traversal check compares like-for-like separators.
+    # Without this, a configured path with forward slashes never matches the
+    # normpath'd candidate on Windows, and every asset falls back to index.html.
+    ui_dir = os.path.normpath(ui_dir)
     index_file = os.path.join(ui_dir, "index.html")
 
     async def spa(request: web.Request) -> web.StreamResponse:
