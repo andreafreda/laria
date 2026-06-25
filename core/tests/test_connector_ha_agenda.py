@@ -54,7 +54,21 @@ async def test_agenda_tools_registered():
     names = {s["name"] for s in _registry(StubHaClient()).schemas()}
     assert {"list_todo_lists", "add_task", "get_tasks", "complete_task",
             "remove_task", "update_task", "delete_calendar_event",
-            "update_calendar_event"} <= names
+            "update_calendar_event", "agenda_overview"} <= names
+
+
+async def test_agenda_overview_combines_sources():
+    client = StubHaClient(
+        states=[
+            {"entity_id": "todo.house", "state": "1", "attributes": {}},
+            {"entity_id": "calendar.family", "state": "on", "attributes": {}},
+        ],
+        events=[{"summary": "Dentist", "uid": "u-1", "start": "2026-01-05", "end": "2026-01-05"}],
+    )
+    result = await _registry(client).dispatch("agenda_overview", {"days": 7}, _ctx())
+    overview = json.loads(result)
+    assert "reminders" in overview and "tasks" in overview and "events" in overview
+    assert overview["events"][0]["summary"] == "Dentist"
 
 
 async def test_add_task_resolves_default_list():

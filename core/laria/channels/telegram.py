@@ -20,6 +20,7 @@ from ..engine import Engine
 from ..llm import get_provider
 from ..scheduler import Scheduler
 from ..storage import identity, init_db, misc
+from .food_jobs import FoodBroadcaster
 from .notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)
@@ -133,6 +134,13 @@ async def _load_scheduled_jobs(scheduler: Scheduler) -> None:
         scheduler.schedule_briefing(briefing)
 
 
+def _schedule_food_jobs(scheduler: Scheduler, food_jobs: FoodBroadcaster) -> None:
+    """Register the built-in proactive food broadcasts on their daily/weekly cron."""
+    scheduler.schedule_cron("food_daily_plan", "0 8 * * *", food_jobs.daily_plan)
+    scheduler.schedule_cron("food_pantry_alert", "30 8 * * *", food_jobs.pantry_alert)
+    scheduler.schedule_cron("food_weekly_report", "0 20 * * 0", food_jobs.weekly_report)
+
+
 def serve() -> None:
     """Entry point: run the Telegram bot with proactive scheduling.
 
@@ -155,6 +163,7 @@ def serve() -> None:
             engine = build_engine(settings, scheduler=scheduler)
             scheduler.start()
             await _load_scheduled_jobs(scheduler)
+            _schedule_food_jobs(scheduler, FoodBroadcaster(client))
             await run(engine, client)
 
     asyncio.run(_main())

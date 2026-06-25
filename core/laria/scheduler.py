@@ -129,6 +129,21 @@ class Scheduler:
         """Remove a briefing's job if present (no error if it is already gone)."""
         self._remove_job(f"briefing_{briefing_id}")
 
+    def schedule_cron(self, job_id: str, cron_expression: str,
+                      callback: Callable[[], Awaitable[None]]) -> bool:
+        """Register a fixed recurring job (no payload), e.g. a daily broadcast.
+
+        Used for the proactive food jobs whose schedule is built in, not stored
+        per user. Returns False on an invalid cron.
+        """
+        try:
+            trigger = cron_trigger(cron_expression)
+        except ValueError as error:
+            logger.warning("invalid cron for job %s: %s", job_id, error)
+            return False
+        self._scheduler.add_job(callback, trigger, id=job_id, replace_existing=True)
+        return True
+
     def _remove_job(self, job_id: str) -> None:
         try:
             self._scheduler.remove_job(job_id)

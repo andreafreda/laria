@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from ...engine.tools import Tool, ToolContext, ToolRegistry
+from ...storage import misc
 from .client import HaClient
 from .tools import _REACHABILITY_ERRORS
 
@@ -221,9 +222,79 @@ def register_ha_agenda_tools(registry: ToolRegistry, client: HaClient) -> None:
             return f"Home Assistant error: {error}"
         return json.dumps({"ok": True, "updated": len(matches)}, ensure_ascii=False)
 
+    async def agenda_overview(inputs: dict[str, Any], ctx: ToolContext) -> str:
+        """Combine reminders, open tasks, and upcoming events into one view.
+
+        Reminders come from the user's own records; tasks and events come from
+        Home Assistant. Each section is collected independently so one failing
+        source does not blank the others.
+        """
+        days = int(inputs.get("days") or 7)
+        overview = {
+            "reminders": await _safe(misc.get_user_reminders(ctx.user_id)),
+            "tasks": await _safe(_open_tasks(client)),
+            "events": await _safe(_upcoming_events(client, days)),
+        }
+        return json.dumps(overview, ensure_ascii=False)
+
     _register_todo_tools(registry, list_todo_lists, add_task, get_tasks,
                          complete_task, remove_task, update_task)
     _register_calendar_edit_tools(registry, delete_calendar_event, update_calendar_event)
+    registry.register(Tool(
+        name="agenda_overview",
+        description=("One combined view of the agenda: active reminders, open to-do tasks, and "
+                     "upcoming calendar events. Use for 'what's on my agenda' style questions."),
+        input_schema={
+            "type": "object",
+            "properties": {"days": {"type": "integer", "description": "Event/task window in days (default 7)"}},
+        },
+        handler=agenda_overview,
+    ))
+
+
+async def _safe(coroutine):
+    """Await a section's coroutine, returning an error marker instead of raising."""
+    try:
+        return await coroutine
+    except Exception as error:
+        return {"error": str(error)}
+
+
+async def _open_tasks(client: HaClient) -> list[dict]:
+    """Collect open (needs_action) items across every HA to-do list."""
+    states = await client.get_states(None)
+    tasks = []
+    for state in states:
+        entity_id = state["entity_id"]
+        if not entity_id.startswith("todo."):
+            continue
+        response = await client.call_service(
+            "todo", "get_items", {"entity_id": entity_id, "status": "needs_action"},
+            return_response=True)
+        service_response = response.get("service_response", {}) if isinstance(response, dict) else {}
+        for item in service_response.get(entity_id, {}).get("items", []):
+            tasks.append({"list": entity_id, "summary": item.get("summary"),
+                          "due": item.get("due")})
+    return tasks
+
+
+async def _upcoming_events(client: HaClient, days: int) -> list[dict]:
+    """Collect events across every HA calendar for the next ``days`` days."""
+    states = await client.get_states(None)
+    start = datetime.now()
+    end = start + timedelta(days=days)
+    events = []
+    for state in states:
+        entity_id = state["entity_id"]
+        if not entity_id.startswith("calendar."):
+            continue
+        for event in await client.get_calendar_events(
+                entity_id, start.isoformat(timespec="seconds"), end.isoformat(timespec="seconds")):
+            events.append({"calendar": entity_id, "summary": event.get("summary"),
+                           "start": _normalize_event_time(event.get("start")),
+                           "end": _normalize_event_time(event.get("end"))})
+    events.sort(key=lambda e: str(e.get("start") or ""))
+    return events
 
 
 def _build_event_update(inputs: dict[str, Any]) -> dict[str, Any]:
