@@ -53,6 +53,23 @@ import { Balance, ExpenseSummary, FinanceService, Goal } from '../../core/financ
         </ion-card>
       }
 
+      @if (categories().length) {
+        <ion-card>
+          <ion-card-header><ion-card-title>Spending by category</ion-card-title></ion-card-header>
+          <ion-card-content>
+            @for (c of categories(); track c.category) {
+              <div class="cat">
+                <div class="cat-row">
+                  <span>{{ c.category }}</span>
+                  <span>{{ c.amount | number:'1.2-2' }}</span>
+                </div>
+                <div class="bar"><div class="bar-fill" [style.width.%]="c.pct"></div></div>
+              </div>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+
       <ion-card>
         <ion-card-header><ion-card-title>Savings goals</ion-card-title></ion-card-header>
         <ion-card-content>
@@ -74,6 +91,10 @@ import { Balance, ExpenseSummary, FinanceService, Goal } from '../../core/financ
   styles: [`
     .goal { margin-bottom: 12px; }
     .goal-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .cat { margin-bottom: 12px; }
+    .cat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .bar { background: var(--ion-color-light); border-radius: 6px; height: 8px; overflow: hidden; }
+    .bar-fill { background: var(--ion-color-primary); height: 100%; }
   `],
 })
 export class DashboardPage implements OnInit {
@@ -82,10 +103,24 @@ export class DashboardPage implements OnInit {
   readonly balances = signal<Balance[]>([]);
   readonly summary = signal<ExpenseSummary | null>(null);
   readonly goals = signal<Goal[]>([]);
+  readonly categories = signal<{ category: string; amount: number; pct: number }[]>([]);
 
   ngOnInit(): void {
     this.finance.balances().subscribe((b) => this.balances.set(b));
-    this.finance.summary().subscribe((s) => this.summary.set(s));
+    this.finance.summary().subscribe((s) => {
+      this.summary.set(s);
+      this.categories.set(this.toBars(s));
+    });
     this.finance.goals().subscribe((g) => this.goals.set(g));
+  }
+
+  /** Turn the expense breakdown into bars sized relative to the biggest category. */
+  private toBars(summary: ExpenseSummary): { category: string; amount: number; pct: number }[] {
+    const amounts = summary.by_category.map((c) => ({
+      category: c.category,
+      amount: Math.abs(c.total),
+    }));
+    const largest = Math.max(1, ...amounts.map((a) => a.amount));
+    return amounts.map((a) => ({ ...a, pct: (a.amount / largest) * 100 }));
   }
 }
