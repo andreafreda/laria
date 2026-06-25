@@ -50,7 +50,9 @@ def build_engine(settings: Settings | None = None,
     # Home Assistant is optional and additive: its tools appear only when HA is
     # configured, so the engine runs unchanged without it.
     if settings.ha.enabled:
-        from .connectors.ha import HaClient, register_ha_tools
-        register_ha_tools(registry, HaClient.from_settings(settings.ha))
+        from .connectors.ha import HaClient, register_ha_agenda_tools, register_ha_tools
+        ha_client = HaClient.from_settings(settings.ha)
+        register_ha_tools(registry, ha_client)
+        register_ha_agenda_tools(registry, ha_client)
 
     return Engine(provider, memory, registry=registry, settings=settings)
