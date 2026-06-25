@@ -47,11 +47,11 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 
 ## Gap residui (aggiornato 2026-06-25)
 
-Backend / core:
-- [ ] **MQTT sensori non wired**: `MqttMirror`/`collect_finance_sensors` esistono ma nessun job li pubblica. HARIA pubblicava economia+bollette+food su MQTT (refresh notturno 00:05 + ogni 5 min). Manca wiring nello scheduler/serve.
-- [ ] **Error log senza writer**: tabella `error_log` presente ma niente ci scrive (la pagina System log resta vuota). HARIA faceva `add_error_log` su ogni eccezione. Wire su handler web/Telegram.
-- [ ] **Notifica HA su errore** (HARIA mandava push app HA): assente.
-- [ ] **Prompt moduli**: system prompt minimale vs guidance HARIA per agenda/news/food (valutare se il modello sbaglia tool).
+Backend / core (chiuso 2026-06-26, branch `feat/telegram-autonomy`):
+- [x] **MQTT sensori wired**: `publish_finance` + job `mqtt_finance_mirror` ogni 15 min in `telegram.serve()` (solo se `MQTT_HOST` configurato). Pubblica balance + goal sensors. (food/bollette MQTT: rimandato.)
+- [x] **Error log writer**: `errors.report_error` scrive in `error_log`; wired su loop Telegram + nuovo `_error_middleware` web (eccezione non gestita → 500 loggato).
+- [x] **Notifica HA su errore**: `report_error` crea `persistent_notification` su HA quando HA abilitato (best effort).
+- [x] **Prompt moduli**: system prompt ora istruisce conversione orari reminder/briefing in ISO/cron vs blocco date/time.
 
 Frontend (parità HARIA):
 - [ ] **Profili** view + edit (peso/BMI/macro target + form salvataggio) — manca UI + endpoint `POST /api/food/profile`.
@@ -63,7 +63,7 @@ Frontend (parità HARIA):
 - [ ] Rifiniture restyle login/chat/import/admin (ereditano già il theme).
 
 Infra / ops:
-- [ ] Docker **due processi** (web + telegram): manca compose/doc che li avvii entrambi + volume.
+- [x] Docker **due processi** (web + telegram): `docker/compose.yaml` con servizio `web` + `telegram` (profilo `telegram`), image e volume condivisi, env comune (DB su `/data`). (chiuso 2026-06-26)
 
 ## Lingua
 - Codice, README, commenti, commit, **nomi di dominio/moduli**: **inglese**.

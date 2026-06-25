@@ -1,22 +1,57 @@
-# Run LARIA locally:
+# Run LARIA locally.
+#
+# Web portal only (default):
 #   ANTHROPIC_API_KEY=sk-... docker compose -f docker/compose.yaml up --build
-# The SQLite database persists in the named volume across restarts.
+#
+# Web portal plus the Telegram bot (the autonomous channel with scheduler):
+#   ANTHROPIC_API_KEY=sk-... TELEGRAM_TOKEN=... \
+#     docker compose -f docker/compose.yaml --profile telegram up --build
+#
+# Both services share one image and one data volume, so they read and write the
+# same SQLite database. The Telegram service is behind a profile so a plain "up"
+# brings up just the portal; add --profile telegram to run the bot too.
+
+x-common-env: &common-env
+  LLM_PROVIDER: anthropic
+  LLM_MODEL: ${LLM_MODEL:-claude-opus-4-8}
+  # Required: the active provider's key. Never bake it into the image.
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in your shell or .env}
+  # Same database file for both services, on the shared volume.
+  LARIA_DATA_DIR: /data
+  LARIA_DB_PATH: /data/laria.db
+  LARIA_JWT_SECRET: ${LARIA_JWT_SECRET:?set LARIA_JWT_SECRET in your shell or .env}
+  LARIA_ADMIN_USER: ${LARIA_ADMIN_USER:-admin}
+  LARIA_ADMIN_PASSWORD: ${LARIA_ADMIN_PASSWORD:?set LARIA_ADMIN_PASSWORD in your shell or .env}
+
 services:
-  laria:
+  web:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     image: laria:dev
+    command: ["python", "-m", "laria.web"]
     ports:
       - "8080:8080"
     environment:
-      LLM_PROVIDER: anthropic
-      LLM_MODEL: ${LLM_MODEL:-claude-opus-4-8}
-      # Required: the active provider's key. Never bake it into the image.
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in your shell or .env}
+      <<: *common-env
     volumes:
       - laria-data:/data
     restart: unless-stopped
+
+  telegram:
+    image: laria:dev
+    # Reuses the image built by the web service; run with --profile telegram.
+    depends_on:
+      - web
+    command: ["python", "-m", "laria.channels.telegram"]
+    environment:
+      <<: *common-env
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:?set TELEGRAM_TOKEN to run the Telegram bot}
+    volumes:
+      - laria-data:/data
+    restart: unless-stopped
+    profiles:
+      - telegram
 
 volumes:
   laria-data:
