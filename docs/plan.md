@@ -25,11 +25,45 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [x] **Auth** (vedi `design-auth.md`): hash pbkdf2 + JWT, profiles/users/guardianships, login + change-password, middleware Bearer, /api/chat da token, Telegram allowlist, admin API owner-only, owner seed. Resta solo: reset Telegram self-service.
 - [x] Canali: **web API JSON** (auth, /api/chat, /api/chat/ws WebSocket, /api/finance/* read-model, /api/finance/import, /api/auth/*, /api/admin/*) + **Telegram** (allowlist + /reset). WebSocket = request/reply persistente (streaming token-by-token rimandato, serve provider streaming).
 - [x] connector-ha: **client REST/WS + tool HA + MQTT mirror + calendar tools**. subscribe_events RIMANDATO di proposito (senza un reaction-engine sarebbe codice morto; lo si fa col layer reazioni).
-- [~] UI **Ionic+Angular+Capacitor** (`ui/`): scaffold + auth (login/JWT/guard/interceptor) + chat (POST /api/chat) + change-password + dashboard finance (balances/summary/goals) + admin owner (utenti/profili) + app-shell menu + tema custom (Plus Jakarta Sans, palette teal, sfondo caldo). `ng build` verde. Restano: pagina config LLM, grafici (matrix), consumo WebSocket streaming, build mobile (cap add iOS/Android).
+- [x] **Autonomia Telegram (core)** — sessione 2026-06-25, branch `feat/telegram-autonomy`:
+  - `scheduler.py` (APScheduler, cron 5 campi semantica Unix) + `Scheduler.schedule_reminder/briefing/cron`.
+  - `channels/notifier.py` (scheduler→Telegram: reminder, briefing; risolve user_id→telegram_chat_id).
+  - `channels/food_jobs.py` (broadcast proattivi: piano 08:00, scadenze 08:30, report settimanale dom 20:00).
+  - moduli engine `reminders` + `news` (briefing CRUD + blocklist) + `services/web_search.py` (ddgs).
+  - connettore HA esteso `connectors/ha/agenda_tools.py`: todo HA (list/add/get/complete/remove/update) + calendar delete/update + `agenda_overview`.
+  - `build_engine(scheduler=...)` registra i nuovi tool; `telegram.serve()` avvia scheduler + ricarica job + food jobs.
+  - dep `apscheduler` + `ddgs` in `core/pyproject.toml`.
+- [~] UI **Ionic+Angular+Capacitor** (`ui/`) — sessione 2026-06-25:
+  - FATTO: design system lockato (palette teal unico accento, off-white freddo no-sand, dark mode pieno, scala radius/shadow, 2 pesi, anti-AI-tells) via skill `design-taste-frontend` (parte framework-agnostica).
+  - FATTO: **Finance** week/month/year (switch + nav ‹›, KPI metric card, barre categoria, grafico 12 mesi) + endpoint `/api/finance/trend` e `/api/finance/category-year`.
+  - FATTO: **Food** page (plan/diary/shopping/pantry) + endpoint `/api/food/*` + `services/macros.py`.
+  - FATTO: **News** briefing CRUD + **System log** (owner) page + endpoint `/api/news/briefings*`, `/api/system/logs*`.
+  - FATTO: fix white-page (`_serve_ui` normpath Windows). `ng build` verde, 166 test backend verdi.
+  - RESTANO (parità HARIA): vedi blocco "Gap residui" sotto.
 - [x] Docker: **immagine combinata** (`docker/Dockerfile` multi-stage: node builda la UI → www, python serve core+UI su :8080; non-root, healthcheck, volume dati). Core serve la UI via `LARIA_UI_DIR` + SPA fallback. Build non ancora verificata in locale (Docker engine spento).
 - [x] **Consolidamento backend**: CI GitHub Actions (pytest 3.11/3.12 offline), `.env.example` completo, smoke test composition root, README quickstart. **Suite attuale: 116 test verdi**.
 - [x] Traduzione prompt/stringhe model-facing IT→EN: di fatto completa (prompt e tool LARIA scritti EN da subito). L'unico italiano residuo è in `ingest/bank_statements.py` = header dei file estratto banca italiani da matchare (voluto, non prompt).
 - [ ] **Memoria agente**: fase 1 = **mem0 dietro wrapper nostro `MemoryBackend`** (plug&play); improvement = motore proprio L0-L3 dopo. Vedi `design-memory.md` §6bis + `memory-engine-handoff.md`.
+
+## Gap residui (aggiornato 2026-06-25)
+
+Backend / core:
+- [ ] **MQTT sensori non wired**: `MqttMirror`/`collect_finance_sensors` esistono ma nessun job li pubblica. HARIA pubblicava economia+bollette+food su MQTT (refresh notturno 00:05 + ogni 5 min). Manca wiring nello scheduler/serve.
+- [ ] **Error log senza writer**: tabella `error_log` presente ma niente ci scrive (la pagina System log resta vuota). HARIA faceva `add_error_log` su ogni eccezione. Wire su handler web/Telegram.
+- [ ] **Notifica HA su errore** (HARIA mandava push app HA): assente.
+- [ ] **Prompt moduli**: system prompt minimale vs guidance HARIA per agenda/news/food (valutare se il modello sbaglia tool).
+
+Frontend (parità HARIA):
+- [ ] **Profili** view + edit (peso/BMI/macro target + form salvataggio) — manca UI + endpoint `POST /api/food/profile`.
+- [ ] **Diary** grafico kcal + storico 30gg (ora solo "oggi").
+- [ ] **Plan** vista mensile (ora solo settimana).
+- [ ] **Finance** sezione budget (barre budget/speso da `/api/finance/budget-status`).
+- [ ] **Export CSV** diario (endpoint + UI).
+- [ ] **Home/landing** con tile riepilogo (ora default = chat).
+- [ ] Rifiniture restyle login/chat/import/admin (ereditano già il theme).
+
+Infra / ops:
+- [ ] Docker **due processi** (web + telegram): manca compose/doc che li avvii entrambi + volume.
 
 ## Lingua
 - Codice, README, commenti, commit, **nomi di dominio/moduli**: **inglese**.
@@ -149,13 +183,13 @@ con schema dati e API di memoria (write/recall/forget). Da fare prima/insieme al
 FATTO: fork+nome, disaccoppiamento core, multi-LLM, storage+moduli, engine,
 connettore HA (+MQTT+calendar), Docker (core), auth completa, canali (web+WS+
 Telegram), read-model dashboard, CI.
-PROSSIMO:
-1. **UI Angular** (Ionic + Capacitor): login, chat (REST + WebSocket), dashboard
-   finance (consuma /api/finance/*), config LLM, admin utenti/profili/tutele.
-2. Docker immagine combinata (core + UI servita).
-3. WebSocket **streaming token-by-token** (serve `provider.generate_stream`), insieme alla UI.
-4. Incrementale: secret cifrati (C), OpenAPI (D), migrazione `haria.db` (H), backup (J),
-   reaction-engine + `subscribe_events`, canali extra (E), i18n (K), motore memoria L0-L3.
+PROSSIMO (vedi blocco "Gap residui"):
+1. Backend autonomia: **error-log writer** + **MQTT sensori wired** (+ notifica HA su errore).
+2. Frontend parità: **profili view+edit**, **finance budget**, **diary chart+storico**, **plan mese**, **export CSV**, **home**.
+3. Infra: docker-compose due processi (web + telegram) + doc deploy standalone.
+4. WebSocket **streaming token-by-token** (serve `provider.generate_stream`).
+5. Incrementale lungo termine: secret cifrati (C), OpenAPI (D), migrazione `haria.db` (H), backup (J),
+   reaction-engine + `subscribe_events`, canali extra (E), i18n (K), motore memoria L0-L3, mobile Capacitor.
 
 ## Decisioni prese
 - **UI:** SPA **Angular** + backend API (REST/WS). Frontend separato dal core.
