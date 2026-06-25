@@ -131,28 +131,31 @@ con schema dati e API di memoria (write/recall/forget). Da fare prima/insieme al
 
 ## Cose che aggiungo io (da valutare)
 
-- **A. Astrazione storage**: oggi SQLite hardcoded. Tenere repository pattern così in futuro Postgres/multi-utente cloud è possibile. Migrazioni versionate (oggi migrazioni leggere ad hoc).
-- **B. Auth & multi-tenant**: IMPLEMENTATO (vedi `design-auth.md`). hash pbkdf2 + JWT, profiles/users/guardianships, login + change-password, middleware Bearer, /api/chat da token, Telegram allowlist, admin API owner-only (utenti/profili/tutele/reset/telegram-link), owner seed da env. Isolamento famiglie = istanze dedicate. Restano: reset Telegram self-service, multi-tenant condiviso (dopo, dietro StorageBackend).
-- **C. Sicurezza segreti**: oggi token in chiaro in config/yaml. Vault/secret manager, cifratura a riposo, niente key nel repo.
-- **D. API pubblica**: REST/WebSocket documentata (OpenAPI) → UI, integrazioni, eventuale app mobile.
-- **E. Canali oltre Telegram**: WhatsApp, web chat, Matrix, Discord — astrarre il layer "messaging" come i provider LLM.
-- **F. Observability**: log strutturati, metriche, health endpoint (oggi errorlog → notifica HA; va reso generico).
-- **G. Test & CI**: oggi pytest locale; aggiungere CI (GitHub Actions), build/push immagine, lint, pin dipendenze (già fatto).
-- **H. Migrazione dati**: tool per importare il `haria.db` esistente nel nuovo prodotto senza perdere economia/cibo/storico.
-- **I. Plugin/modulo SDK**: formalizzare l'attuale registry moduli come SDK documentato, così terzi aggiungono moduli.
-- **J. Backup/restore** nativi (oggi si appoggia ai backup HA).
-- **K. i18n**: oggi IT hardcoded; predisporre multilingua se prodotto pubblico.
+- **A. Astrazione storage**: DECISO di restare **sqlite-diretto** ora (YAGNI). `StorageBackend` (per Postgres/multi-tenant condiviso) si introduce solo se serve scala SaaS. Vedi `reflections.md`.
+- **B. Auth & multi-tenant**: ✅ IMPLEMENTATO (vedi `design-auth.md`). Restano: multi-tenant condiviso (dopo, dietro StorageBackend).
+- **C. Sicurezza segreti**: ⬜ TODO. Chiavi LLM/token cifrate a riposo, niente key nel repo (oggi `.env` gitignored, ok; manca cifratura at-rest + gestione da UI).
+- **D. API pubblica**: 🟡 REST + WebSocket fatti; manca **documentazione OpenAPI**.
+- **E. Canali oltre Telegram**: ⬜ WhatsApp/Matrix/Discord, dietro un layer messaging astratto.
+- **F. Observability**: ⬜ log strutturati, metriche, health (oggi /health base + error_log).
+- **G. Test & CI**: ✅ CI GitHub Actions (pytest 3.11/3.12). Manca: build/push immagine, lint.
+- **H. Migrazione dati**: ⬜ tool per importare `haria.db` esistente (economia/cibo/storico) in LARIA.
+- **I. Plugin/modulo SDK**: ⬜ formalizzare il registry moduli (`ToolRegistry`) come SDK documentato.
+- **J. Backup/restore** nativi: ⬜ (sqlite su volume = backup banale del file; manca comando dedicato).
+- **K. i18n**: ⬜ predisporre multilingua UI/risposte se prodotto pubblico.
 
 ---
 
-## Ordine suggerito (bozza, da discutere)
-1. Fork + nome (1,2) — setup.
-2. Disaccoppiamento core + astrazione storage/config (3, A) — fondamenta.
-3. Provider LLM astratto (8) — sblocca valore subito.
-4. Connettore HA via API (4) + Lovelace export (7).
-5. Docker image (5).
-6. UI web nuova + auth (6, B, C).
-7. Resto (D–K) incrementale.
+## Ordine — stato
+FATTO: fork+nome, disaccoppiamento core, multi-LLM, storage+moduli, engine,
+connettore HA (+MQTT+calendar), Docker (core), auth completa, canali (web+WS+
+Telegram), read-model dashboard, CI.
+PROSSIMO:
+1. **UI Angular** (Ionic + Capacitor): login, chat (REST + WebSocket), dashboard
+   finance (consuma /api/finance/*), config LLM, admin utenti/profili/tutele.
+2. Docker immagine combinata (core + UI servita).
+3. WebSocket **streaming token-by-token** (serve `provider.generate_stream`), insieme alla UI.
+4. Incrementale: secret cifrati (C), OpenAPI (D), migrazione `haria.db` (H), backup (J),
+   reaction-engine + `subscribe_events`, canali extra (E), i18n (K), motore memoria L0-L3.
 
 ## Decisioni prese
 - **UI:** SPA **Angular** + backend API (REST/WS). Frontend separato dal core.
@@ -162,6 +165,9 @@ con schema dati e API di memoria (write/recall/forget). Da fare prima/insieme al
   Conseguenza: igiene segreti obbligatoria dal commit 1 (niente token nel repo, `.env`/secret manager).
 - **Layout:** **monorepo** (core + connettore-HA + UI Angular + docker in cartelle/packages).
 - **LLM:** layer provider **universale**. Anthropic + **OpenAI-compatible fatto** (`openai`/`ollama`/`openai-compatible`, copre OpenAI/Ollama/LM Studio/vLLM). Selezione via `LLM_PROVIDER`.
+- **Storage:** **sqlite-diretto** (no astrazione ora). Isolamento famiglie = istanze dedicate (1 container + 1 volume + 1 sqlite = 1 household). Vedi `reflections.md`/`design-auth.md`.
+- **Auth:** single-household multi-utente; profili (permanenti) + user (login opzionale) + tutela; JWT. Vedi `design-auth.md`.
+- **Frontend:** **Ionic + Angular + Capacitor** (un codebase web + iOS + Android).
 
 ## Nome scelto: **LARIA**
 - **L**ocal **A**ssistant **R**eactive **I**ntelligent **A**gent (HARIA: Home→Local, coerente col disaccoppiamento da HA).
