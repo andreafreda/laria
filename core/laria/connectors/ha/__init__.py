@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from .agenda_tools import register_ha_agenda_tools
 from .client import HaClient
-from .mqtt import MqttMirror, collect_finance_sensors
+from .mqtt import MqttMirror, collect_finance_sensors, publish_finance
 from .tools import register_ha_tools
 
 __all__ = ["HaClient", "register_ha_tools", "register_ha_agenda_tools",
-           "MqttMirror", "collect_finance_sensors"]
+           "MqttMirror", "collect_finance_sensors", "publish_finance"]

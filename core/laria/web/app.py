@@ -15,6 +15,7 @@ from datetime import date, timedelta
 from aiohttp import web
 
 from .. import auth
+from ..errors import report_error
 from ..ingest import bank_statements
 from ..modules.news import _dump_topics, _parse_topics
 from ..services.macros import compute_macro_targets
@@ -30,6 +31,24 @@ _USER = "user"
 # authenticates itself from a query-string token, since browsers cannot set
 # headers on a WebSocket handshake.
 _PUBLIC_PATHS = frozenset({"/health", "/api/auth/login", "/api/chat/ws"})
+
+
+@web.middleware
+async def _error_middleware(request: web.Request, handler):
+    """Turn an unhandled handler exception into a logged 500, not a silent crash.
+
+    HTTP responses raised on purpose (401, 404, redirects) pass through; only a
+    real exception is recorded via the central error reporter so it shows on the
+    System log page, then a generic 500 is returned.
+    """
+    try:
+        return await handler(request)
+    except web.HTTPException:
+        raise
+    except Exception as error:
+        logger.exception("unhandled error on %s", request.path)
+        await report_error("web", f"unhandled error on {request.path}", error)
+        return web.json_response({"error": "internal error"}, status=500)
 
 
 @web.middleware
@@ -511,7 +530,7 @@ def create_app(engine) -> web.Application:
     The engine is any object with ``async chat(user_id, text, user_config)``, so
     tests can inject a stub. Production wires the real one via ``build_engine``.
     """
-    app = web.Application(middlewares=[_auth_middleware])
+    app = web.Application(middlewares=[_error_middleware, _auth_middleware])
     app[ENGINE] = engine
     app.router.add_get("/health", _health)
     app.router.add_post("/api/auth/login", _login)

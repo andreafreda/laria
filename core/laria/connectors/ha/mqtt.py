@@ -88,6 +88,19 @@ async def collect_finance_sensors() -> list[Sensor]:
     return sensors
 
 
+async def publish_finance(mirror: "MqttMirror") -> None:
+    """Mirror the current finance sensors (balances and goals) to MQTT.
+
+    Gathers the sensors on the event loop, then runs the blocking publish in a
+    worker thread so the caller stays async. Meant to be scheduled periodically.
+    """
+    import asyncio
+
+    sensors = await collect_finance_sensors()
+    if sensors:
+        await asyncio.to_thread(mirror.publish, sensors)
+
+
 class MqttMirror:
     """Publishes sensors to an MQTT broker using HA discovery (retained)."""
 

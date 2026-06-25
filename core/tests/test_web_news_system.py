@@ -57,6 +57,17 @@ async def test_create_briefing_requires_cron(client):
     assert resp.status == 400
 
 
+async def test_unhandled_error_is_logged_and_returns_500(client):
+    headers = _auth_header()
+    # A non-numeric year makes the trend handler raise; the error middleware
+    # should turn it into a 500 and record it for the System log page.
+    resp = await client.get("/api/finance/trend?year=notanumber", headers=headers)
+    assert resp.status == 500
+
+    logs = await (await client.get("/api/system/logs", headers=headers)).json()
+    assert any(entry["source"] == "web" for entry in logs)
+
+
 async def test_system_logs_owner_only(client):
     await misc.add_error_log("test", "error", "boom", None)
     assert (await client.get("/api/system/logs", headers=_auth_header(role="adult"))).status == 403
