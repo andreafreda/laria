@@ -21,12 +21,13 @@ Telegram, scheduler, claude_engine, v0.3.3). Repo LARIA: github.com/andreafreda/
 - [x] **Engine agentico provider-agnostic** `core/laria/engine/`: loop tool-use su `provider.generate`, ToolRegistry pluggable, core-tool memory/recall/respond, prompt EN, summary rolling (38 test verdi).
 - [x] Moduli dominio come tool registrabili: **finance + food + utilities** (`modules/`, 22 tool) + **nutrition lookup** (`services/nutrition.py` OFF/USDA + tool `lookup_nutrition`) + **parser estratti** (`ingest/bank_statements.py` BancoPosta/Postepay, categorie EN) + **endpoint upload** `POST /api/finance/import` (multipart → parse → import dedup).
 - [x] **Convenzione codice**: skill `/codecraft` (repo `.claude/skills/`, globale, pubblicata su `andreafreda/skills`) project-agnostic: leggibilità umana, SOLID con giudizio, no code smell, docstring human-oriented, niente trattini come punteggiatura in prosa.
-- [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite a quel punto: 46 test verdi (ora 65).
-- [~] Canali: **web API JSON** (`web/`: /api/chat, /health, /api/finance/import) + **Telegram** (`channels/telegram.py`, Bot API via aiohttp, `python -m laria.channels.telegram`). Resta: WebSocket streaming.
+- [x] **Refactor /codecraft**: `storage/finance` e `storage/food` splittati in package per concetto + facade; helper `db.build_set_clause`; sweep trattini su core+README. Suite a quel punto: 46 test verdi (ora 116).
+- [x] **Auth** (vedi `design-auth.md`): hash pbkdf2 + JWT, profiles/users/guardianships, login + change-password, middleware Bearer, /api/chat da token, Telegram allowlist, admin API owner-only, owner seed. Resta solo: reset Telegram self-service.
+- [~] Canali: **web API JSON** (auth, /api/chat, /api/finance/import, /api/auth/*, /api/admin/*) + **Telegram** (allowlist). Resta: WebSocket streaming.
 - [~] connector-ha: **client REST/WS + tool HA + MQTT mirror fatti** (`core/laria/connectors/ha/`: HaClient con DI; tool get_house_state/control_device/speak_alexa; `mqtt.py` mirror finance→sensori HA discovery, namespacing `MQTT_NODE_ID` default `laria` per coesistere con HARIA, paho-mqtt opzionale lazy). Restano: subscribe_events, calendar tools.
 - [ ] UI Angular (incl. dashboard configurazione LLM).
 - [~] Docker: **immagine core fatta** (`docker/Dockerfile` python-slim non-root + healthcheck, `docker/compose.yaml` con volume dati, `.dockerignore`; `python -m laria.web`). Build non ancora verificata in locale (Docker Desktop engine spento). Resta: immagine combinata con UI.
-- [x] **Consolidamento backend**: CI GitHub Actions (pytest 3.11/3.12 offline), `.env.example` completo, smoke test composition root, README quickstart. **Suite attuale: 65 test verdi**.
+- [x] **Consolidamento backend**: CI GitHub Actions (pytest 3.11/3.12 offline), `.env.example` completo, smoke test composition root, README quickstart. **Suite attuale: 116 test verdi**.
 - [ ] Step traduzione completa IT→EN (terminologia, vedi sotto).
 - [ ] **Memoria agente**: fase 1 = **mem0 dietro wrapper nostro `MemoryBackend`** (plug&play); improvement = motore proprio L0-L3 dopo. Vedi `design-memory.md` §6bis + `memory-engine-handoff.md`.
 
