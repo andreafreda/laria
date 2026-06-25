@@ -176,7 +176,12 @@ Port di `claude_engine.py`, **riprogettato** (non 1:1) per disaccoppiare da HA/a
 - **Docker immagine con UI**: bloccato sulla UI (non esiste ancora).
 - Suite: **126 test verdi**.
 
-## Prossimo: UI Angular (scaffold Ionic+Angular+Capacitor)
+## UI — stack e skill (deciso, da iniziare)
+- Stack: **Ionic + Angular + Capacitor** (un codebase web + iOS + Android). Frontend in `ui/`, consuma la JSON API (`/api/auth/login`, `/api/chat`, `/api/chat/ws`, `/api/finance/*`, `/api/admin/*`). Auth: JWT in header (Bearer) per REST, `?token=` per WebSocket.
+- Skill installate globali (per la UI): angular-developer, angular-new-app, ionic-angular, ionic-app-creation, ionic-app-development, ionic-expert, capacitor-angular, capacitor-app-creation, capacitor-app-development, capacitor-plugins, capacitor-expert, high-end-visual-design, design-taste-frontend, minimalist-ui, redesign-existing-projects, codecraft.
+- Pagine MVP: login (+ forced change se must_change), chat (REST ora, WS dopo), dashboard finance (balances/summary/matrix/budget/goals da /api/finance/*), config LLM, admin utenti/profili/tutele.
+
+## Prossimo: scaffold UI in `ui/` (ionic start Angular standalone) + servizio API + login
 - moduli dominio come tool registrabili: portare `nutrition.py` (lookup OFF/USDA), `econ_import.py` (parser estratti) e wrapper tool che espongono `storage.finance/food/...` all'LLM (oggi l'engine ha solo i core-tool). Questi erano i `modules/*` di HARIA.
 - canali: web API REST/WS (aiohttp `webpanel.py`→API vera), Telegram astratto.
 - poi connector-ha (entity_cache/mqtt/ha_client), UI Angular, Docker.
