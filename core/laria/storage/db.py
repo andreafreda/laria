@@ -69,6 +69,7 @@ async def init_db() -> None:
         await db.executescript(_UTILITIES_SCHEMA)
         await db.executescript(_CONVERSATION_SCHEMA)
         await db.executescript(_MISC_SCHEMA)
+        await db.executescript(_IDENTITY_SCHEMA)
 
         # Seed generic default categories (idempotent, no personal data).
         for cat in DEFAULT_CATEGORIES:
@@ -309,5 +310,32 @@ CREATE TABLE IF NOT EXISTS error_log (
     level TEXT,
     message TEXT NOT NULL,
     traceback TEXT
+);
+"""
+
+# Identity: profiles (every household member, the data subject), users (optional
+# login attached to a profile), and guardianships (a user acting for a dependent
+# profile). See docs/design-auth.md.
+_IDENTITY_SCHEMA = """
+CREATE TABLE IF NOT EXISTS profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    is_dependent INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'adult',
+    profile_id INTEGER REFERENCES profiles(id),
+    telegram_chat_id TEXT UNIQUE,
+    must_change_password INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS guardianships (
+    guardian_user_id INTEGER NOT NULL REFERENCES users(id),
+    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+    PRIMARY KEY (guardian_user_id, profile_id)
 );
 """
