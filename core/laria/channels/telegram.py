@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import secrets
 
 import aiohttp
 
+from .. import auth
 from ..app import build_engine
 from ..config import get_settings
 from ..engine import Engine
@@ -70,8 +72,32 @@ async def handle_update(update: dict, engine: Engine, client: TelegramClient) ->
         await client.send_message(chat_id, "This chat is not linked to a LARIA account.")
         return False
 
+    if text.startswith("/"):
+        return await _handle_command(text, user, client, chat_id)
+
     reply = await engine.chat(str(user["id"]), text, {})
     await client.send_message(chat_id, reply)
+    return True
+
+
+async def _handle_command(text: str, user: dict, client: TelegramClient,
+                          chat_id: int) -> bool:
+    """Handle a bot command from a linked user. Returns True if recognized.
+
+    ``/reset`` is a recovery path that works without email: because the chat is
+    already verified (allowlist), it sets a temporary password and forces a
+    change at the next web login.
+    """
+    command = text.split()[0]
+    if command == "/reset":
+        temporary = secrets.token_urlsafe(9)
+        await auth.reset_password(user["id"], temporary, must_change=True)
+        await client.send_message(
+            chat_id,
+            f"Temporary password: {temporary}\n"
+            "Log in on the web; you will be asked to set a new one.")
+        return True
+    await client.send_message(chat_id, "Unknown command. Try /reset.")
     return True
 
 

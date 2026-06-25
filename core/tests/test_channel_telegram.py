@@ -79,3 +79,24 @@ async def test_empty_text_is_ignored(db):
     handled = await handle_update(_text_update(42, "   "), engine, client)
     assert handled is False
     assert engine.calls == []
+
+
+async def test_reset_command_sets_temp_password(db):
+    os.environ["LARIA_JWT_SECRET"] = "test-secret"
+    reload_settings()
+    from laria import auth
+    uid = await auth.create_user_account("dave", "old-pass-12")
+    await identity.link_telegram(uid, "77")
+    engine, client = StubEngine(), StubClient()
+
+    handled = await handle_update(_text_update(77, "/reset"), engine, client)
+
+    assert handled is True
+    assert engine.calls == []  # a command does not reach the engine
+    message = client.sent[0][1]
+    assert "Temporary password:" in message
+    temp = message.split("Temporary password:")[1].split()[0]
+    # the temp password works and the user is flagged to change it
+    assert await auth.authenticate("dave", temp)
+    assert (await identity.get_user_by_id(uid))["must_change_password"] is True
+    os.environ.pop("LARIA_JWT_SECRET", None)
