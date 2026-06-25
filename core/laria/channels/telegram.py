@@ -15,7 +15,7 @@ import aiohttp
 from ..app import build_engine
 from ..config import get_settings
 from ..engine import Engine
-from ..storage import init_db
+from ..storage import identity, init_db
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +50,13 @@ class TelegramClient:
 async def handle_update(update: dict, engine: Engine, client: TelegramClient) -> bool:
     """Process one update: run a text message through the engine and reply.
 
-    Returns True if a message was handled, False for updates we ignore (no
-    message, or a non-text message such as a sticker). The chat id is used as the
-    engine user id so each chat keeps its own conversation.
+    Only chats linked to a LARIA user (allowlist via ``telegram_chat_id``) are
+    served; an unlinked chat gets a short refusal so the bot is not an open door.
+    The engine runs under the linked user's id, so a Telegram conversation shares
+    identity and memory with that user's web login.
+
+    Returns True if a message was handled, False for ignored updates (no message,
+    a non-text message, or an unlinked chat).
     """
     message = update.get("message") or {}
     text = (message.get("text") or "").strip()
@@ -61,7 +65,12 @@ async def handle_update(update: dict, engine: Engine, client: TelegramClient) ->
     if not text or chat_id is None:
         return False
 
-    reply = await engine.chat(str(chat_id), text, {})
+    user = await identity.get_user_by_telegram(str(chat_id))
+    if user is None:
+        await client.send_message(chat_id, "This chat is not linked to a LARIA account.")
+        return False
+
+    reply = await engine.chat(str(user["id"]), text, {})
     await client.send_message(chat_id, reply)
     return True
 
