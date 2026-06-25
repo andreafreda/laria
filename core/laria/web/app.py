@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import date
 
 from aiohttp import web
@@ -37,7 +38,10 @@ async def _auth_middleware(request: web.Request, handler):
     on a missing or invalid token the request is rejected with 401 before it
     reaches the handler.
     """
-    if request.path in _PUBLIC_PATHS:
+    # Only API routes (other than the public ones) need a token; static UI files
+    # and the SPA fallback are served freely.
+    needs_auth = request.path.startswith("/api/") and request.path not in _PUBLIC_PATHS
+    if not needs_auth:
         return await handler(request)
 
     header = request.headers.get("Authorization", "")
@@ -374,4 +378,29 @@ def create_app(engine) -> web.Application:
     app.router.add_post("/api/admin/users/reset-password", _admin_reset_password)
     app.router.add_post("/api/admin/users/link-telegram", _admin_link_telegram)
     app.router.add_post("/api/admin/guardianships", _admin_add_guardianship)
+    _serve_ui(app)
     return app
+
+
+def _serve_ui(app: web.Application) -> None:
+    """Serve the built Angular UI when LARIA_UI_DIR points to its files.
+
+    Registered after the API routes so they win. A catch-all returns the
+    requested file if it exists, else index.html, which is what a single-page app
+    needs so client-side routes (e.g. /dashboard) load. Unset in dev, where the
+    UI is served separately by `ng serve`.
+    """
+    ui_dir = os.environ.get("LARIA_UI_DIR")
+    if not ui_dir or not os.path.isdir(ui_dir):
+        return
+    index_file = os.path.join(ui_dir, "index.html")
+
+    async def spa(request: web.Request) -> web.StreamResponse:
+        requested = request.match_info.get("tail", "")
+        candidate = os.path.normpath(os.path.join(ui_dir, requested))
+        # Guard against path traversal outside the UI directory.
+        if candidate.startswith(ui_dir) and os.path.isfile(candidate):
+            return web.FileResponse(candidate)
+        return web.FileResponse(index_file)
+
+    app.router.add_get("/{tail:.*}", spa)

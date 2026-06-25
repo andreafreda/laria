@@ -4,8 +4,11 @@
 .env
 *.env
 docs/
-ui/
 connector-ha/
+# UI source is needed for the build stage; only skip its heavy/generated dirs.
+ui/node_modules/
+ui/www/
+ui/.angular/
 **/__pycache__/
 **/*.pyc
 **/.pytest_cache/

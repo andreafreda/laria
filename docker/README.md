@@ -9,7 +9,9 @@ Run LARIA as a standalone container: the core engine behind its JSON API.
 ANTHROPIC_API_KEY=sk-... docker compose -f docker/compose.yaml up --build
 ```
 
-The API is then on `http://localhost:8080`:
+The image builds the Angular UI and serves it together with the API, so the app
+is at `http://localhost:8080` (open it in a browser). The same origin also serves
+the API:
 
 ```bash
 curl http://localhost:8080/health
