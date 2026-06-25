@@ -247,6 +247,18 @@ async def _finance_goals(request: web.Request) -> web.Response:
     return web.json_response(await finance.get_goals())
 
 
+async def _finance_trend(request: web.Request) -> web.Response:
+    """Income/expenses/net for each month of a year. Query: year (default current)."""
+    year = int(request.query.get("year", date.today().year))
+    return web.json_response(await finance.monthly_trend(year))
+
+
+async def _finance_category_year(request: web.Request) -> web.Response:
+    """Per-category spending across a year. Query: year (default current)."""
+    year = int(request.query.get("year", date.today().year))
+    return web.json_response(await finance.category_spending_year(year))
+
+
 # --------------------------------------------------------------------------- #
 # Admin (owner only): manage profiles, users, guardianships
 # --------------------------------------------------------------------------- #
@@ -371,6 +383,8 @@ def create_app(engine) -> web.Application:
     app.router.add_get("/api/finance/matrix", _finance_matrix)
     app.router.add_get("/api/finance/budget-status", _finance_budget_status)
     app.router.add_get("/api/finance/goals", _finance_goals)
+    app.router.add_get("/api/finance/trend", _finance_trend)
+    app.router.add_get("/api/finance/category-year", _finance_category_year)
     app.router.add_get("/api/admin/users", _admin_list_users)
     app.router.add_get("/api/admin/profiles", _admin_list_profiles)
     app.router.add_post("/api/admin/profiles", _admin_create_profile)

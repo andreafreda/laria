@@ -70,3 +70,17 @@ async def test_matrix_and_goals_and_budget(client):
     status = await (await client.get(
         "/api/finance/budget-status?year=2026&month=1", headers=headers)).json()
     assert status[0]["category"] == "groceries" and status[0]["spent"] == 30.0
+
+
+async def test_trend_returns_twelve_months(client):
+    resp = await client.get("/api/finance/trend?year=2026", headers=_auth_header())
+    trend = await resp.json()
+    assert len(trend) == 12
+    january = next(m for m in trend if m["month"] == 1)
+    assert january["income"] == 200.0 and abs(january["expenses"]) == 30.0
+
+
+async def test_category_year(client):
+    resp = await client.get("/api/finance/category-year?year=2026", headers=_auth_header())
+    categories = await resp.json()
+    assert any(c["category"] == "groceries" for c in categories)
