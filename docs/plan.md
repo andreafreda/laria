@@ -53,14 +53,13 @@ Backend / core (chiuso 2026-06-26, branch `feat/telegram-autonomy`):
 - [x] **Notifica HA su errore**: `report_error` crea `persistent_notification` su HA quando HA abilitato (best effort).
 - [x] **Prompt moduli**: system prompt ora istruisce conversione orari reminder/briefing in ISO/cron vs blocco date/time.
 
-Frontend (parità HARIA):
-- [ ] **Profili** view + edit (peso/BMI/macro target + form salvataggio) — manca UI + endpoint `POST /api/food/profile`.
-- [ ] **Diary** grafico kcal + storico 30gg (ora solo "oggi").
-- [ ] **Plan** vista mensile (ora solo settimana).
-- [ ] **Finance** sezione budget (barre budget/speso da `/api/finance/budget-status`).
-- [ ] **Export CSV** diario (endpoint + UI).
-- [ ] **Home/landing** con tile riepilogo (ora default = chat).
-- [ ] Rifiniture restyle login/chat/import/admin (ereditano già il theme).
+Frontend (parità HARIA) — chiuso 2026-06-26:
+- [x] **Profili** view + edit (`/profiles`): BMI + macro target + storico peso; `POST /api/food/profile`.
+- [x] **Diary**: date nav ‹ ›, grafico kcal 30gg, storico cliccabile, export CSV (`GET /api/food/diary/history`, `/export.csv`).
+- [x] **Plan** switch Week/Month + nav.
+- [x] **Finance** sezione Budget (vista Month, barre budget/speso ok/amber/over).
+- [x] **Home** (`/home`) con metric + tile + "today"; redirect post-login chat→home.
+- [~] Rifiniture login/chat/import/admin: ereditano il theme; restyle fine rimandato (basso impatto).
 
 Infra / ops:
 - [x] Docker **due processi** (web + telegram): `docker/compose.yaml` con servizio `web` + `telegram` (profilo `telegram`), image e volume condivisi, env comune (DB su `/data`). (chiuso 2026-06-26)
