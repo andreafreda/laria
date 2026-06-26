@@ -5,7 +5,10 @@ import {
   IonListHeader, IonItem, IonLabel, IonIcon, IonMenuToggle,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { chatbubbleOutline, walletOutline, peopleOutline, logOutOutline } from 'ionicons/icons';
+import {
+  homeOutline, chatbubbleOutline, walletOutline, restaurantOutline, personCircleOutline,
+  newspaperOutline, peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
+} from 'ionicons/icons';
 import { AuthService } from './core/auth.service';
 
 /** App shell: a side menu for navigation around a routed outlet. The menu shows
@@ -26,6 +29,10 @@ import { AuthService } from './core/auth.service';
               <ion-list>
                 <ion-list-header>LARIA</ion-list-header>
                 <ion-menu-toggle auto-hide="false">
+                  <ion-item routerLink="/home" detail="false">
+                    <ion-icon slot="start" name="home-outline"></ion-icon>
+                    <ion-label>Home</ion-label>
+                  </ion-item>
                   <ion-item routerLink="/chat" detail="false">
                     <ion-icon slot="start" name="chatbubble-outline"></ion-icon>
                     <ion-label>Chat</ion-label>
@@ -34,10 +41,34 @@ import { AuthService } from './core/auth.service';
                     <ion-icon slot="start" name="wallet-outline"></ion-icon>
                     <ion-label>Finance</ion-label>
                   </ion-item>
+                  <ion-item routerLink="/food" detail="false">
+                    <ion-icon slot="start" name="restaurant-outline"></ion-icon>
+                    <ion-label>Food</ion-label>
+                  </ion-item>
+                  <ion-item routerLink="/profiles" detail="false">
+                    <ion-icon slot="start" name="person-circle-outline"></ion-icon>
+                    <ion-label>Profiles</ion-label>
+                  </ion-item>
+                  <ion-item routerLink="/lists" detail="false">
+                    <ion-icon slot="start" name="list-outline"></ion-icon>
+                    <ion-label>Lists</ion-label>
+                  </ion-item>
+                  <ion-item routerLink="/reminders" detail="false">
+                    <ion-icon slot="start" name="alarm-outline"></ion-icon>
+                    <ion-label>Reminders</ion-label>
+                  </ion-item>
+                  <ion-item routerLink="/news" detail="false">
+                    <ion-icon slot="start" name="newspaper-outline"></ion-icon>
+                    <ion-label>News</ion-label>
+                  </ion-item>
                   @if (auth.isOwner()) {
                     <ion-item routerLink="/admin" detail="false">
                       <ion-icon slot="start" name="people-outline"></ion-icon>
                       <ion-label>Family</ion-label>
+                    </ion-item>
+                    <ion-item routerLink="/logs" detail="false">
+                      <ion-icon slot="start" name="warning-outline"></ion-icon>
+                      <ion-label>System log</ion-label>
                     </ion-item>
                   }
                   <ion-item button (click)="logout()" detail="false">
@@ -59,7 +90,10 @@ export class AppComponent {
   private readonly router = inject(Router);
 
   constructor() {
-    addIcons({ chatbubbleOutline, walletOutline, peopleOutline, logOutOutline });
+    addIcons({
+      homeOutline, chatbubbleOutline, walletOutline, restaurantOutline, personCircleOutline,
+      newspaperOutline, peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
+    });
   }
 
   logout(): void {

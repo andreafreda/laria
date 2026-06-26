@@ -17,7 +17,12 @@ from .. import auth
 from ..app import build_engine
 from ..config import get_settings
 from ..engine import Engine
-from ..storage import identity, init_db
+from ..errors import report_error
+from ..llm import get_provider
+from ..scheduler import Scheduler
+from ..storage import identity, init_db, misc
+from .food_jobs import FoodBroadcaster
+from .notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -101,30 +106,73 @@ async def _handle_command(text: str, user: dict, client: TelegramClient,
     return True
 
 
-async def run(engine: Engine, token: str) -> None:
+async def run(engine: Engine, client: TelegramClient) -> None:
     """Poll Telegram forever, handling each update. Advances the offset so each
-    update is processed once."""
+    update is processed once. The caller owns the client's HTTP session, so the
+    same client can also be used for proactive sends."""
     offset = 0
-    async with aiohttp.ClientSession() as session:
-        client = TelegramClient(token, session)
-        logger.info("Telegram channel started")
-        while True:
+    logger.info("Telegram channel started")
+    while True:
+        try:
+            updates = await client.get_updates(offset)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as error:
+            logger.warning("Telegram poll failed, retrying: %s", error)
+            await asyncio.sleep(3)
+            continue
+        for update in updates:
+            offset = update["update_id"] + 1
             try:
-                updates = await client.get_updates(offset)
-            except (aiohttp.ClientError, asyncio.TimeoutError) as error:
-                logger.warning("Telegram poll failed, retrying: %s", error)
-                await asyncio.sleep(3)
-                continue
-            for update in updates:
-                offset = update["update_id"] + 1
-                try:
-                    await handle_update(update, engine, client)
-                except Exception:
-                    logger.exception("failed to handle update %s", update.get("update_id"))
+                await handle_update(update, engine, client)
+            except Exception as error:
+                update_id = update.get("update_id")
+                logger.exception("failed to handle update %s", update_id)
+                await report_error("telegram", f"failed to handle update {update_id}", error)
+
+
+async def _load_scheduled_jobs(scheduler: Scheduler) -> None:
+    """Queue every active reminder and briefing so they fire after a restart."""
+    for reminder in await misc.get_active_reminders():
+        scheduler.schedule_reminder(reminder)
+    for briefing in await misc.get_active_briefings():
+        scheduler.schedule_briefing(briefing)
+
+
+def _schedule_food_jobs(scheduler: Scheduler, food_jobs: FoodBroadcaster) -> None:
+    """Register the built-in proactive food broadcasts on their daily/weekly cron."""
+    scheduler.schedule_cron("food_daily_plan", "0 8 * * *", food_jobs.daily_plan)
+    scheduler.schedule_cron("food_pantry_alert", "30 8 * * *", food_jobs.pantry_alert)
+    scheduler.schedule_cron("food_weekly_report", "0 20 * * 0", food_jobs.weekly_report)
+
+
+def _schedule_mqtt_mirror(scheduler: Scheduler, settings) -> None:
+    """Mirror finance sensors to MQTT every 15 minutes, when a broker is set.
+
+    Only registered if a HA MQTT host is configured, so a deployment without MQTT
+    runs unchanged. The publish itself is best effort: a broker outage logs and
+    is retried at the next tick.
+    """
+    if not settings.ha.mqtt_host:
+        return
+    from ..connectors.ha import MqttMirror, publish_finance
+    mirror = MqttMirror(settings.ha)
+
+    async def _refresh() -> None:
+        try:
+            await publish_finance(mirror)
+        except Exception as error:
+            logger.warning("MQTT finance mirror failed: %s", error)
+
+    scheduler.schedule_cron("mqtt_finance_mirror", "*/15 * * * *", _refresh)
 
 
 def serve() -> None:
-    """Entry point: build the engine and run the Telegram poller."""
+    """Entry point: run the Telegram bot with proactive scheduling.
+
+    Builds the engine wired to a scheduler so reminders and briefings created in
+    chat fire live, reloads any jobs saved from previous runs, then polls for
+    messages. The Telegram client's HTTP session is shared between the poller and
+    the proactive notifier.
+    """
     settings = get_settings()
     logging.basicConfig(level=settings.log_level.upper())
     if not settings.telegram_token:
@@ -132,7 +180,16 @@ def serve() -> None:
 
     async def _main() -> None:
         await init_db()
-        await run(build_engine(settings), settings.telegram_token)
+        async with aiohttp.ClientSession() as session:
+            client = TelegramClient(settings.telegram_token, session)
+            notifier = TelegramNotifier(client, get_provider(settings))
+            scheduler = Scheduler(notifier.fire_reminder, notifier.fire_briefing)
+            engine = build_engine(settings, scheduler=scheduler)
+            scheduler.start()
+            await _load_scheduled_jobs(scheduler)
+            _schedule_food_jobs(scheduler, FoodBroadcaster(client))
+            _schedule_mqtt_mirror(scheduler, settings)
+            await run(engine, client)
 
     asyncio.run(_main())
 

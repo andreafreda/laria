@@ -36,25 +36,40 @@
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
 
-/* LARIA visual polish: softer cards, calmer toolbars, comfortable spacing. */
+/* LARIA visual polish. Two font weights only (400 regular, 600 for emphasis),
+ * one radius and one shadow from the theme, calm borderless toolbars. */
 ion-card {
   border-radius: var(--laria-radius);
   box-shadow: var(--laria-shadow);
+  border: 1px solid var(--laria-border);
   margin: 14px 0;
 }
 
 ion-toolbar {
   --border-width: 0;
+  --min-height: 60px;
 }
 
-ion-card-title {
-  font-weight: 700;
+ion-title {
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
+ion-card-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: 1.05rem;
+}
+
 ion-list-header {
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: 1.1rem;
   padding-top: 12px;
+}
+
+/* Comfortable max width for content on large screens, so data does not sprawl. */
+.laria-content-wrap {
+  max-width: 760px;
+  margin: 0 auto;
 }

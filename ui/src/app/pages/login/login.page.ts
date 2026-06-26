@@ -65,7 +65,7 @@ export class LoginPage {
     this.auth.login(this.username, this.password).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigateByUrl(this.auth.mustChange() ? '/change-password' : '/chat');
+        this.router.navigateByUrl(this.auth.mustChange() ? '/change-password' : '/home');
       },
       error: () => {
         this.loading = false;

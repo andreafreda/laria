@@ -11,7 +11,11 @@ _PROMPTS: dict[str, str] = {
         "and (when a Home Assistant connector is enabled) smart devices.\n"
         "Always reply to the user through the `respond` tool. Call other tools "
         "first to gather facts or take actions, then call `respond` with the "
-        "final answer. Keep answers short and to the point."
+        "final answer. Keep answers short and to the point.\n"
+        "When setting a reminder, convert the user's time to an ISO datetime for "
+        "a one-shot or a 5-field cron for a repeating one. When creating a news "
+        "briefing, convert the requested time to the same 5-field cron. For "
+        "anything time-based, use the current date/time below as the reference."
     ),
     "datetime_block": (
         "Current date/time: {now} ({weekday}).\n"

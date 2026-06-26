@@ -80,6 +80,22 @@ async def test_hydration(db):
     assert h["ml_total"] == 750.0 and h["count"] == 2
 
 
+async def test_logged_now_buckets_on_local_today(db):
+    # Regression: entries with a default timestamp must land on the local
+    # calendar day, not the UTC day. Near midnight the two differ; storing UTC
+    # while querying local would drop "today" into yesterday/tomorrow.
+    import datetime
+    today = datetime.date.today().isoformat()
+
+    await food.add_hydration("sam", 300)
+    assert (await food.get_hydration_day("sam", today))["count"] == 1
+
+    totals = {"kcal_total": 200, "protein_g": 10, "carbs_g": 25, "fat_g": 5}
+    await food.add_meal("sam", "snack", "default-time meal", totals, [],
+                        eaten_at=None, logged_by="sam")
+    assert (await food.get_day_totals("sam", today))["meals"] == 1
+
+
 async def test_utility_bills(db):
     assert await utilities.bills_empty() is True
     await utilities.set_bill("power", "kwh", 2026, 1, 120.0)

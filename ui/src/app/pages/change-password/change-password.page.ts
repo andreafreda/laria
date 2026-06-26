@@ -64,7 +64,7 @@ export class ChangePasswordPage {
     this.auth.changePassword(this.password).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigateByUrl('/chat');
+        this.router.navigateByUrl('/home');
       },
       error: () => {
         this.loading = false;

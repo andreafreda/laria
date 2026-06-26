@@ -24,15 +24,51 @@ export const routes: Routes = [
       import('./pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
   },
   {
+    path: 'food',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/food/food.page').then((m) => m.FoodPage),
+  },
+  {
+    path: 'profiles',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/profiles/profiles.page').then((m) => m.ProfilesPage),
+  },
+  {
+    path: 'home',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/home/home.page').then((m) => m.HomePage),
+  },
+  {
     path: 'import',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/import/import.page').then((m) => m.ImportPage),
+  },
+  {
+    path: 'lists',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/lists/lists.page').then((m) => m.ListsPage),
+  },
+  {
+    path: 'reminders',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/reminders/reminders.page').then((m) => m.RemindersPage),
+  },
+  {
+    path: 'news',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/news/news.page').then((m) => m.NewsPage),
+  },
+  {
+    path: 'logs',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/logs/logs.page').then((m) => m.LogsPage),
   },
   {
     path: 'admin',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/admin/admin.page').then((m) => m.AdminPage),
   },
-  { path: '', redirectTo: 'chat', pathMatch: 'full' },
-  { path: '**', redirectTo: 'chat' },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
+  { path: '**', redirectTo: 'home' },
 ];

@@ -23,7 +23,7 @@ async def add_meal(member: str, meal_type: str, description: str, totals: dict,
                 fiber_g, sugar_g, sat_fat_g, sodium_mg,
                 vit_c_mg, vit_d_ug, iron_mg, calcium_mg, potassium_mg, magnesium_mg,
                 eaten_at, logged_by)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now', 'localtime')), ?)""",
             (member, meal_type, description,
              totals.get("kcal_total"), totals.get("protein_g"),
              totals.get("carbs_g"), totals.get("fat_g"),

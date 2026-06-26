@@ -12,7 +12,9 @@ async def add_hydration(member: str, ml: float) -> dict:
     """Log a drink for a member (in ml); return the stored entry."""
     async with connect() as db:
         cur = await db.execute(
-            "INSERT INTO hydration_log (member, ml) VALUES (?, ?)", (member, ml)
+            "INSERT INTO hydration_log (member, ml, logged_at) "
+            "VALUES (?, ?, datetime('now', 'localtime'))",
+            (member, ml),
         )
         await db.commit()
         entry_id = cur.lastrowid

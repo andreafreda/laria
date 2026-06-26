@@ -70,6 +70,7 @@ async def init_db() -> None:
         await db.executescript(_CONVERSATION_SCHEMA)
         await db.executescript(_MISC_SCHEMA)
         await db.executescript(_IDENTITY_SCHEMA)
+        await db.executescript(_LISTS_SCHEMA)
 
         # Seed generic default categories (idempotent, no personal data).
         for cat in DEFAULT_CATEGORIES:
@@ -338,4 +339,26 @@ CREATE TABLE IF NOT EXISTS guardianships (
     profile_id INTEGER NOT NULL REFERENCES profiles(id),
     PRIMARY KEY (guardian_user_id, profile_id)
 );
+"""
+
+# Generic household lists (todo/checklist/shopping/packing) and their items.
+# An item's optional due_at (local-time string) is what a later step turns into
+# a scheduled reminder. The food-specific shopping/pantry tables are separate.
+_LISTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS lists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'todo',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS list_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    list_id INTEGER NOT NULL REFERENCES lists(id),
+    text TEXT NOT NULL,
+    qty TEXT,
+    checked INTEGER NOT NULL DEFAULT 0,
+    due_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_list_items_list_id ON list_items(list_id);
 """

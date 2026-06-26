@@ -7,16 +7,21 @@ or other integrations all consume the same surface. The engine is injected with
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import os
-from datetime import date
+from datetime import date, timedelta
 
 from aiohttp import web
 
 from .. import auth
+from ..errors import report_error
 from ..ingest import bank_statements
-from ..storage import finance, identity
+from ..modules.news import _dump_topics, _parse_topics
+from ..services.macros import compute_macro_targets
+from ..storage import finance, food, identity, lists, misc
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +33,24 @@ _USER = "user"
 # authenticates itself from a query-string token, since browsers cannot set
 # headers on a WebSocket handshake.
 _PUBLIC_PATHS = frozenset({"/health", "/api/auth/login", "/api/chat/ws"})
+
+
+@web.middleware
+async def _error_middleware(request: web.Request, handler):
+    """Turn an unhandled handler exception into a logged 500, not a silent crash.
+
+    HTTP responses raised on purpose (401, 404, redirects) pass through; only a
+    real exception is recorded via the central error reporter so it shows on the
+    System log page, then a generic 500 is returned.
+    """
+    try:
+        return await handler(request)
+    except web.HTTPException:
+        raise
+    except Exception as error:
+        logger.exception("unhandled error on %s", request.path)
+        await report_error("web", f"unhandled error on {request.path}", error)
+        return web.json_response({"error": "internal error"}, status=500)
 
 
 @web.middleware
@@ -247,6 +270,333 @@ async def _finance_goals(request: web.Request) -> web.Response:
     return web.json_response(await finance.get_goals())
 
 
+async def _finance_trend(request: web.Request) -> web.Response:
+    """Income/expenses/net for each month of a year. Query: year (default current)."""
+    year = int(request.query.get("year", date.today().year))
+    return web.json_response(await finance.monthly_trend(year))
+
+
+async def _finance_category_year(request: web.Request) -> web.Response:
+    """Per-category spending across a year. Query: year (default current)."""
+    year = int(request.query.get("year", date.today().year))
+    return web.json_response(await finance.category_spending_year(year))
+
+
+# --------------------------------------------------------------------------- #
+# Food: meal plan, diary, profiles, shopping, pantry
+# --------------------------------------------------------------------------- #
+
+async def _food_plan(request: web.Request) -> web.Response:
+    """Planned meals for a date range. Query: date_from, date_to (default this week)."""
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    date_from = request.query.get("date_from", monday.isoformat())
+    date_to = request.query.get("date_to", (monday + timedelta(days=6)).isoformat())
+    return web.json_response(await food.get_meal_plan(date_from, date_to))
+
+
+async def _food_diary(request: web.Request) -> web.Response:
+    """Each member's meals and nutrition for a day. Query: date (default today).
+
+    For every member with a meal that day, returns the day's totals, hydration,
+    calorie target and derived macro targets, and the meals themselves, so the
+    page renders a full picture without further requests.
+    """
+    day = request.query.get("date", date.today().isoformat())
+    members = await food.list_members_with_meals(day)
+    entries = []
+    for member in members:
+        profile = await food.get_profile(member)
+        kcal_target = profile.get("kcal_target") if profile else None
+        entries.append({
+            "member": member,
+            "totals": await food.get_day_totals(member, day),
+            "hydration": await food.get_hydration_day(member, day),
+            "kcal_target": kcal_target,
+            "macro_targets": compute_macro_targets(
+                kcal_target, profile.get("weight_kg") if profile else None),
+            "meals": await food.get_meals(member, f"{day} 00:00:00", f"{day} 23:59:59"),
+        })
+    return web.json_response({"date": day, "members": entries})
+
+
+async def _food_profiles(request: web.Request) -> web.Response:
+    """Family nutrition profiles, each with derived macro targets."""
+    profiles = await food.list_profiles()
+    for profile in profiles:
+        profile["macro_targets"] = compute_macro_targets(
+            profile.get("kcal_target"), profile.get("weight_kg"))
+    return web.json_response(profiles)
+
+
+async def _food_weight(request: web.Request) -> web.Response:
+    """Weight history for a member. Query: member (required)."""
+    member = request.query.get("member", "")
+    if not member:
+        return web.json_response({"error": "member is required"}, status=400)
+    return web.json_response(await food.get_weight_history(member))
+
+
+async def _food_shopping(request: web.Request) -> web.Response:
+    """The shopping list (including checked items) plus the estimated cost."""
+    return web.json_response({
+        "items": await food.get_shopping_list(include_checked=True),
+        "cost": await food.get_shopping_cost(include_checked=True),
+    })
+
+
+async def _food_shopping_toggle(request: web.Request) -> web.Response:
+    """Toggle one shopping item checked/unchecked. Body: {id}."""
+    try:
+        data = await request.json()
+        toggled = await food.toggle_shopping_item(int(data["id"]))
+    except (ValueError, KeyError, TypeError):
+        return web.json_response({"error": "invalid request"}, status=400)
+    return web.json_response({"ok": toggled})
+
+
+async def _food_pantry(request: web.Request) -> web.Response:
+    """Pantry stock plus the items expiring within three days."""
+    return web.json_response({
+        "items": await food.get_pantry(),
+        "expiring": await food.get_pantry_expiring(3),
+    })
+
+
+_PROFILE_TEXT_FIELDS = ("sex", "goal", "activity_level", "allergies", "preferences", "restrictions")
+_PROFILE_NUMBER_FIELDS = ("age", "height_cm", "weight_kg", "kcal_target")
+
+
+async def _food_profile_save(request: web.Request) -> web.Response:
+    """Create or update a member's nutrition profile. Body: {member, ...fields}.
+
+    Only the supplied fields change; empty text clears a field. BMI is recomputed
+    from weight and height when both are present, and returned so the UI can show
+    it without a reload.
+    """
+    try:
+        data = await request.json()
+    except (json.JSONDecodeError, ValueError):
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    member = (data.get("member") or "").strip().lower()
+    if not member:
+        return web.json_response({"error": "member is required"}, status=400)
+
+    fields: dict = {}
+    for key in _PROFILE_TEXT_FIELDS:
+        if key in data:
+            fields[key] = (data.get(key) or "").strip() or None
+    for key in _PROFILE_NUMBER_FIELDS:
+        raw = data.get(key)
+        if raw not in (None, ""):
+            try:
+                fields[key] = float(raw)
+            except (TypeError, ValueError):
+                pass
+    weight, height = fields.get("weight_kg"), fields.get("height_cm")
+    if weight and height:
+        fields["bmi"] = round(weight / ((height / 100) ** 2), 1)
+
+    await food.upsert_profile(member, fields)
+    return web.json_response({"ok": True, "bmi": fields.get("bmi")})
+
+
+async def _food_diary_history(request: web.Request) -> web.Response:
+    """Recent days that have logged meals (for the diary chart and history list).
+
+    Query: days (default 30). Each entry has the day, member count, meal count
+    and total calories.
+    """
+    days = int(request.query.get("days", 30))
+    return web.json_response(await food.get_logged_days(days))
+
+
+async def _food_export_csv(request: web.Request) -> web.Response:
+    """Download the meal diary as CSV. Query: date_from, date_to (default 30 days)."""
+    end = date.today()
+    date_from = request.query.get("date_from", (end - timedelta(days=30)).isoformat())
+    date_to = request.query.get("date_to", end.isoformat())
+    rows = await food.export_meals(date_from, date_to)
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["date", "member", "meal", "description", "kcal",
+                     "protein_g", "carbs_g", "fat_g", "logged_by"])
+    for row in rows:
+        writer.writerow([row["eaten_at"], row["member"], row["meal_type"], row["description"],
+                         row["kcal_total"], row["protein_g"], row["carbs_g"], row["fat_g"],
+                         row["logged_by"]])
+    return web.Response(
+        body=buffer.getvalue().encode("utf-8-sig"),
+        content_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="laria_diary_{date_from}_{date_to}.csv"'},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# News briefings (per user) and system error log
+# --------------------------------------------------------------------------- #
+
+async def _news_briefings(request: web.Request) -> web.Response:
+    """The current user's briefings, with topics parsed into structured form."""
+    user_id = str(request[_USER]["sub"])
+    briefings = await misc.get_user_briefings(user_id)
+    for briefing in briefings:
+        briefing["topics"] = _parse_topics(briefing["topics"])
+    return web.json_response(briefings)
+
+
+async def _news_create_briefing(request: web.Request) -> web.Response:
+    """Create a briefing for the current user. Body: {topics, cron, num_news?}.
+
+    Created here it is stored but not scheduled live, since the web process has no
+    scheduler; the Telegram process schedules it the next time it loads active
+    briefings.
+    """
+    user_id = str(request[_USER]["sub"])
+    try:
+        data = await request.json()
+        topics = _dump_topics(data["topics"])
+        cron = str(data["cron"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "topics and cron are required"}, status=400)
+    if not cron:
+        return web.json_response({"error": "cron is required"}, status=400)
+    briefing = await misc.add_briefing(user_id, topics, cron, int(data.get("num_news") or 5))
+    return web.json_response(briefing)
+
+
+async def _news_delete_briefing(request: web.Request) -> web.Response:
+    """Delete one of the current user's briefings. Body: {id}."""
+    user_id = str(request[_USER]["sub"])
+    try:
+        briefing_id = int((await request.json())["id"])
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "id is required"}, status=400)
+    deleted = await misc.deactivate_briefing(briefing_id, user_id)
+    return web.json_response({"ok": deleted})
+
+
+async def _system_logs(request: web.Request) -> web.Response:
+    """Recent captured errors. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    return web.json_response(await misc.get_error_logs(200))
+
+
+async def _system_logs_clear(request: web.Request) -> web.Response:
+    """Clear the error log. Owner only."""
+    if denied := _require_owner(request):
+        return denied
+    return web.json_response({"deleted": await misc.clear_error_logs()})
+
+
+# --------------------------------------------------------------------------- #
+# Reminders (per user). Backend is shared with the Telegram channel; the web
+# process only stores them. Like briefings, a reminder created here is scheduled
+# live the next time the Telegram process loads active reminders.
+# --------------------------------------------------------------------------- #
+
+async def _reminders(request: web.Request) -> web.Response:
+    """The current user's active reminders (one-shot and recurring)."""
+    user_id = str(request[_USER]["sub"])
+    return web.json_response(await misc.get_user_reminders(user_id))
+
+
+async def _create_reminder(request: web.Request) -> web.Response:
+    """Create a reminder. Body: {message, remind_at?, recurring?}.
+
+    Pass ``remind_at`` ('YYYY-MM-DD HH:MM') for a one-shot or ``recurring`` (a
+    5-field cron) for a repeat; exactly one is expected.
+    """
+    user_id = str(request[_USER]["sub"])
+    try:
+        data = await request.json()
+        message = str(data["message"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "message is required"}, status=400)
+    remind_at = (data.get("remind_at") or "").strip() or None
+    recurring = (data.get("recurring") or "").strip() or None
+    if not message:
+        return web.json_response({"error": "message is required"}, status=400)
+    if not remind_at and not recurring:
+        return web.json_response(
+            {"error": "remind_at or recurring is required"}, status=400)
+    reminder = await misc.add_reminder(user_id, message, remind_at, recurring)
+    return web.json_response(reminder)
+
+
+async def _delete_reminder(request: web.Request) -> web.Response:
+    """Cancel one of the current user's reminders. Body: {id}."""
+    user_id = str(request[_USER]["sub"])
+    try:
+        reminder_id = int((await request.json())["id"])
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "id is required"}, status=400)
+    deleted = await misc.deactivate_reminder(reminder_id, user_id)
+    return web.json_response({"ok": deleted})
+
+
+# --------------------------------------------------------------------------- #
+# Lists (generic household lists and their items)
+# --------------------------------------------------------------------------- #
+
+async def _lists(request: web.Request) -> web.Response:
+    """Every list with its count of open items."""
+    return web.json_response(await lists.get_lists())
+
+
+async def _create_list(request: web.Request) -> web.Response:
+    """Create a list. Body: {name, kind?}."""
+    try:
+        data = await request.json()
+        name = str(data["name"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "name is required"}, status=400)
+    if not name:
+        return web.json_response({"error": "name is required"}, status=400)
+    created = await lists.create_list(name, str(data.get("kind") or "todo"))
+    return web.json_response(created)
+
+
+async def _delete_list(request: web.Request) -> web.Response:
+    """Delete a list and its items. Path: /api/lists/{id}."""
+    deleted = await lists.delete_list(int(request.match_info["id"]))
+    return web.json_response({"ok": deleted})
+
+
+async def _list_items(request: web.Request) -> web.Response:
+    """One list's items. Path: /api/lists/{id}/items."""
+    return web.json_response(await lists.get_list_items(int(request.match_info["id"])))
+
+
+async def _add_list_item(request: web.Request) -> web.Response:
+    """Add an item to a list. Path: /api/lists/{id}/items. Body: {text, qty?, due_at?}."""
+    list_id = int(request.match_info["id"])
+    try:
+        data = await request.json()
+        text = str(data["text"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "text is required"}, status=400)
+    if not text:
+        return web.json_response({"error": "text is required"}, status=400)
+    item = await lists.add_list_item(
+        list_id, text, data.get("qty") or None, data.get("due_at") or None)
+    return web.json_response(item)
+
+
+async def _toggle_list_item(request: web.Request) -> web.Response:
+    """Flip one item's checked state. Path: /api/lists/items/{id}/toggle."""
+    toggled = await lists.toggle_list_item(int(request.match_info["id"]))
+    return web.json_response({"ok": toggled})
+
+
+async def _delete_list_item(request: web.Request) -> web.Response:
+    """Delete one item. Path: /api/lists/items/{id}."""
+    deleted = await lists.delete_list_item(int(request.match_info["id"]))
+    return web.json_response({"ok": deleted})
+
+
 # --------------------------------------------------------------------------- #
 # Admin (owner only): manage profiles, users, guardianships
 # --------------------------------------------------------------------------- #
@@ -358,7 +708,7 @@ def create_app(engine) -> web.Application:
     The engine is any object with ``async chat(user_id, text, user_config)``, so
     tests can inject a stub. Production wires the real one via ``build_engine``.
     """
-    app = web.Application(middlewares=[_auth_middleware])
+    app = web.Application(middlewares=[_error_middleware, _auth_middleware])
     app[ENGINE] = engine
     app.router.add_get("/health", _health)
     app.router.add_post("/api/auth/login", _login)
@@ -371,6 +721,33 @@ def create_app(engine) -> web.Application:
     app.router.add_get("/api/finance/matrix", _finance_matrix)
     app.router.add_get("/api/finance/budget-status", _finance_budget_status)
     app.router.add_get("/api/finance/goals", _finance_goals)
+    app.router.add_get("/api/finance/trend", _finance_trend)
+    app.router.add_get("/api/finance/category-year", _finance_category_year)
+    app.router.add_get("/api/food/plan", _food_plan)
+    app.router.add_get("/api/food/diary", _food_diary)
+    app.router.add_get("/api/food/profiles", _food_profiles)
+    app.router.add_get("/api/food/weight", _food_weight)
+    app.router.add_get("/api/food/shopping", _food_shopping)
+    app.router.add_post("/api/food/shopping/toggle", _food_shopping_toggle)
+    app.router.add_get("/api/food/pantry", _food_pantry)
+    app.router.add_post("/api/food/profile", _food_profile_save)
+    app.router.add_get("/api/food/diary/history", _food_diary_history)
+    app.router.add_get("/api/food/export.csv", _food_export_csv)
+    app.router.add_get("/api/news/briefings", _news_briefings)
+    app.router.add_post("/api/news/briefings", _news_create_briefing)
+    app.router.add_post("/api/news/briefings/delete", _news_delete_briefing)
+    app.router.add_get("/api/reminders", _reminders)
+    app.router.add_post("/api/reminders", _create_reminder)
+    app.router.add_post("/api/reminders/delete", _delete_reminder)
+    app.router.add_get("/api/lists", _lists)
+    app.router.add_post("/api/lists", _create_list)
+    app.router.add_get("/api/lists/{id}/items", _list_items)
+    app.router.add_post("/api/lists/{id}/items", _add_list_item)
+    app.router.add_post("/api/lists/{id}/delete", _delete_list)
+    app.router.add_post("/api/lists/items/{id}/toggle", _toggle_list_item)
+    app.router.add_post("/api/lists/items/{id}/delete", _delete_list_item)
+    app.router.add_get("/api/system/logs", _system_logs)
+    app.router.add_post("/api/system/logs/clear", _system_logs_clear)
     app.router.add_get("/api/admin/users", _admin_list_users)
     app.router.add_get("/api/admin/profiles", _admin_list_profiles)
     app.router.add_post("/api/admin/profiles", _admin_create_profile)
@@ -393,6 +770,10 @@ def _serve_ui(app: web.Application) -> None:
     ui_dir = os.environ.get("LARIA_UI_DIR")
     if not ui_dir or not os.path.isdir(ui_dir):
         return
+    # Normalize so the path-traversal check compares like-for-like separators.
+    # Without this, a configured path with forward slashes never matches the
+    # normpath'd candidate on Windows, and every asset falls back to index.html.
+    ui_dir = os.path.normpath(ui_dir)
     index_file = os.path.join(ui_dir, "index.html")
 
     async def spa(request: web.Request) -> web.StreamResponse:
