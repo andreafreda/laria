@@ -7,7 +7,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   chatbubbleOutline, walletOutline, restaurantOutline, newspaperOutline,
-  peopleOutline, warningOutline, logOutOutline,
+  peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
 } from 'ionicons/icons';
 import { AuthService } from './core/auth.service';
 
@@ -40,6 +40,14 @@ import { AuthService } from './core/auth.service';
                   <ion-item routerLink="/food" detail="false">
                     <ion-icon slot="start" name="restaurant-outline"></ion-icon>
                     <ion-label>Food</ion-label>
+                  </ion-item>
+                  <ion-item routerLink="/lists" detail="false">
+                    <ion-icon slot="start" name="list-outline"></ion-icon>
+                    <ion-label>Lists</ion-label>
+                  </ion-item>
+                  <ion-item routerLink="/reminders" detail="false">
+                    <ion-icon slot="start" name="alarm-outline"></ion-icon>
+                    <ion-label>Reminders</ion-label>
                   </ion-item>
                   <ion-item routerLink="/news" detail="false">
                     <ion-icon slot="start" name="newspaper-outline"></ion-icon>
@@ -76,7 +84,7 @@ export class AppComponent {
   constructor() {
     addIcons({
       chatbubbleOutline, walletOutline, restaurantOutline, newspaperOutline,
-      peopleOutline, warningOutline, logOutOutline,
+      peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
     });
   }
 

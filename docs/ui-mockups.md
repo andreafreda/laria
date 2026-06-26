@@ -30,6 +30,8 @@ Legenda mockup: `[..]` controllo/bottone, `▾` select, `‹ ›` nav, `[##==]` 
 |  • Chat         |   .laria-content-wrap                |
 |  • Finance      |     ... card ...                     |
 |  • Food         |                                      |
+|  • Lists        |                                      |
+|  • Reminders    |                                      |
 |  • News         |                                      |
 |  · (owner)      |                                      |
 |  • Family       |                                      |
@@ -38,7 +40,7 @@ Legenda mockup: `[..]` controllo/bottone, `▾` select, `‹ ›` nav, `[##==]` 
 +-----------------+--------------------------------------+
 ```
 
-Voci menu: Home, Chat, Finance, Food, News, [Family, System log] (solo owner), Sign out.
+Voci menu: Home, Chat, Finance, Food, Lists, Reminders, News, [Family, System log] (solo owner), Sign out.
 Pattern header pagina: toolbar titolo (+ azione a destra) e, dove serve, una seconda toolbar
 con `ion-segment` (switch periodo/tab).
 
@@ -339,11 +341,83 @@ Stati: empty "No errors logged".
 
 ---
 
+## 12. Lists (`/lists`)  — NUOVA
+
+Scopo: liste generiche della famiglia, non solo spesa. Una lista ha un tipo
+(todo, checklist, shopping, packing); ogni voce puo avere quantita, spunta e una
+scadenza opzionale (`due_at`). Una voce con scadenza puo accendere una notifica,
+riusando lo scheduler dei reminders (nessuna logica nuova di consegna).
+
+Dati: `/api/lists` (GET elenco liste), `/api/lists/{id}` (GET voci),
+`POST /api/lists` (crea), `POST /api/lists/{id}/items` (aggiungi voce),
+`POST /api/lists/items/{id}/toggle` (spunta), delete lista/voce.
+
+```
++------------------------------------------+
+|  [≡] Lists                      [ + New ] |
+|  [ All | Todo | Shopping | Checklist ]    |   segment per tipo
++------------------------------------------+
+|  +-- Groceries (shopping) -- 6 open ----+ |
+|  |  [ ] milk        1 L                  | |
+|  |  [x] bread                            | |
+|  +---------------------------------------+ |
+|  +-- House todo (todo) -- 3 open --------+ |
+|  |  [ ] call plumber     ⏰ Fri 09:00    | |   voce con due_at → reminder
+|  |  [ ] pay tax          ⏰ 30 Jun       | |
+|  +---------------------------------------+ |
+|                                          |
+|  New item   [____________] [date?] [ Add ]|
++------------------------------------------+
+```
+
+Voce con scadenza: badge orario (`⏰`); se la notifica e attiva mostra il bell
+pieno. Toggle spunta = ottimistico. Stati: empty "No lists yet" per tipo, error.
+
+---
+
+## 13. Reminders (`/reminders`)  — NUOVA
+
+Scopo: promemoria one-shot o ricorrenti (cron), consegnati via Telegram dallo
+scheduler gia esistente (`laria/scheduler.py`). La UI espone cio che oggi si fa
+solo in chat: vedere, creare e cancellare i promemoria attivi.
+
+Dati: nuovo `/api/reminders` (GET attivi, POST crea, delete). Backend gia pronto
+(`storage/misc.py` + `Scheduler.schedule_reminder`).
+
+```
++------------------------------------------+
+|  [≡] Reminders                  [ + New ] |
++------------------------------------------+
+|  +-- once -----------------------------+ |
+|  | Take medicine                       | |
+|  | 2026-06-27 08:00            [Delete]| |
+|  +-------------------------------------+ |
+|  +-- recurring ------------------------+ |
+|  | Water plants                        | |
+|  | 0 9 * * 1,4  (Mon, Thu 09:00)[Delete]| |   cron reso leggibile
+|  +-------------------------------------+ |
+|                                          |
+|  New reminder                            |
+|  Message  [__________________________]   |
+|  ( ) Once   [date] [time]                |
+|  ( ) Repeat [cron 0 9 * * *]             |
+|  [ Add reminder ]                        |
++------------------------------------------+
+```
+
+Stati: empty "No reminders yet"; error create (cron/data invalida → messaggio).
+One-shot nel passato rifiutato lato scheduler.
+
+---
+
 ## Endpoint backend mancanti (delta per queste UI)
 
 - `POST /api/food/profile` — upsert profilo (riusa `food.upsert_profile`, ricalcola BMI).
 - `GET /api/food/diary/history?days=30` — riusa `food.get_logged_days`.
 - `GET /api/food/export.csv?date_from&date_to` — riusa `food.export_meals`, `text/csv`.
+- `GET/POST /api/reminders`, `DELETE /api/reminders/{id}` — riusa `storage/misc.py` + scheduler.
+- `GET/POST /api/lists`, `/api/lists/{id}`, `/api/lists/{id}/items`,
+  `/api/lists/items/{id}/toggle` — nuovo `storage/lists.py` (tabelle `lists`/`list_items`).
 - (Plan mese e Finance budget: endpoint già esistenti, basta usarli dalla UI.)
 
 ## Ordine di build
@@ -355,5 +429,7 @@ D. Diary chart + storico + date nav; Export CSV.
 E. Plan Week/Month.
 F. Home (`/home`) + redirect post-login (default da chat → home).
 G. Rifiniture: Login/Change-password/Chat/Import/Admin allineate al design system, stati loading/empty/error ovunque.
+H. Reminders: API `/api/reminders` + service + page `/reminders` + voce menu.
+I. Lists: `storage/lists.py` (+test) + API `/api/lists*` + service + page `/lists` + voce menu.
 
 Ogni step: `ng build` verde + commit. Pagine nuove → route + voce menu.

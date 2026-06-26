@@ -34,6 +34,17 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/import/import.page').then((m) => m.ImportPage),
   },
   {
+    path: 'lists',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/lists/lists.page').then((m) => m.ListsPage),
+  },
+  {
+    path: 'reminders',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/reminders/reminders.page').then((m) => m.RemindersPage),
+  },
+  {
     path: 'news',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/news/news.page').then((m) => m.NewsPage),

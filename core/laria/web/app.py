@@ -19,7 +19,7 @@ from ..errors import report_error
 from ..ingest import bank_statements
 from ..modules.news import _dump_topics, _parse_topics
 from ..services.macros import compute_macro_targets
-from ..storage import finance, food, identity, misc
+from ..storage import finance, food, identity, lists, misc
 
 logger = logging.getLogger(__name__)
 
@@ -420,6 +420,112 @@ async def _system_logs_clear(request: web.Request) -> web.Response:
 
 
 # --------------------------------------------------------------------------- #
+# Reminders (per user). Backend is shared with the Telegram channel; the web
+# process only stores them. Like briefings, a reminder created here is scheduled
+# live the next time the Telegram process loads active reminders.
+# --------------------------------------------------------------------------- #
+
+async def _reminders(request: web.Request) -> web.Response:
+    """The current user's active reminders (one-shot and recurring)."""
+    user_id = str(request[_USER]["sub"])
+    return web.json_response(await misc.get_user_reminders(user_id))
+
+
+async def _create_reminder(request: web.Request) -> web.Response:
+    """Create a reminder. Body: {message, remind_at?, recurring?}.
+
+    Pass ``remind_at`` ('YYYY-MM-DD HH:MM') for a one-shot or ``recurring`` (a
+    5-field cron) for a repeat; exactly one is expected.
+    """
+    user_id = str(request[_USER]["sub"])
+    try:
+        data = await request.json()
+        message = str(data["message"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "message is required"}, status=400)
+    remind_at = (data.get("remind_at") or "").strip() or None
+    recurring = (data.get("recurring") or "").strip() or None
+    if not message:
+        return web.json_response({"error": "message is required"}, status=400)
+    if not remind_at and not recurring:
+        return web.json_response(
+            {"error": "remind_at or recurring is required"}, status=400)
+    reminder = await misc.add_reminder(user_id, message, remind_at, recurring)
+    return web.json_response(reminder)
+
+
+async def _delete_reminder(request: web.Request) -> web.Response:
+    """Cancel one of the current user's reminders. Body: {id}."""
+    user_id = str(request[_USER]["sub"])
+    try:
+        reminder_id = int((await request.json())["id"])
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "id is required"}, status=400)
+    deleted = await misc.deactivate_reminder(reminder_id, user_id)
+    return web.json_response({"ok": deleted})
+
+
+# --------------------------------------------------------------------------- #
+# Lists (generic household lists and their items)
+# --------------------------------------------------------------------------- #
+
+async def _lists(request: web.Request) -> web.Response:
+    """Every list with its count of open items."""
+    return web.json_response(await lists.get_lists())
+
+
+async def _create_list(request: web.Request) -> web.Response:
+    """Create a list. Body: {name, kind?}."""
+    try:
+        data = await request.json()
+        name = str(data["name"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "name is required"}, status=400)
+    if not name:
+        return web.json_response({"error": "name is required"}, status=400)
+    created = await lists.create_list(name, str(data.get("kind") or "todo"))
+    return web.json_response(created)
+
+
+async def _delete_list(request: web.Request) -> web.Response:
+    """Delete a list and its items. Path: /api/lists/{id}."""
+    deleted = await lists.delete_list(int(request.match_info["id"]))
+    return web.json_response({"ok": deleted})
+
+
+async def _list_items(request: web.Request) -> web.Response:
+    """One list's items. Path: /api/lists/{id}/items."""
+    return web.json_response(await lists.get_list_items(int(request.match_info["id"])))
+
+
+async def _add_list_item(request: web.Request) -> web.Response:
+    """Add an item to a list. Path: /api/lists/{id}/items. Body: {text, qty?, due_at?}."""
+    list_id = int(request.match_info["id"])
+    try:
+        data = await request.json()
+        text = str(data["text"]).strip()
+    except (KeyError, TypeError, ValueError):
+        return web.json_response({"error": "text is required"}, status=400)
+    if not text:
+        return web.json_response({"error": "text is required"}, status=400)
+    item = await lists.add_list_item(
+        list_id, text, data.get("qty") or None, data.get("due_at") or None)
+    return web.json_response(item)
+
+
+async def _toggle_list_item(request: web.Request) -> web.Response:
+    """Flip one item's checked state. Path: /api/lists/items/{id}/toggle."""
+    toggled = await lists.toggle_list_item(int(request.match_info["id"]))
+    return web.json_response({"ok": toggled})
+
+
+async def _delete_list_item(request: web.Request) -> web.Response:
+    """Delete one item. Path: /api/lists/items/{id}."""
+    deleted = await lists.delete_list_item(int(request.match_info["id"]))
+    return web.json_response({"ok": deleted})
+
+
+# --------------------------------------------------------------------------- #
 # Admin (owner only): manage profiles, users, guardianships
 # --------------------------------------------------------------------------- #
 
@@ -555,6 +661,16 @@ def create_app(engine) -> web.Application:
     app.router.add_get("/api/news/briefings", _news_briefings)
     app.router.add_post("/api/news/briefings", _news_create_briefing)
     app.router.add_post("/api/news/briefings/delete", _news_delete_briefing)
+    app.router.add_get("/api/reminders", _reminders)
+    app.router.add_post("/api/reminders", _create_reminder)
+    app.router.add_post("/api/reminders/delete", _delete_reminder)
+    app.router.add_get("/api/lists", _lists)
+    app.router.add_post("/api/lists", _create_list)
+    app.router.add_get("/api/lists/{id}/items", _list_items)
+    app.router.add_post("/api/lists/{id}/items", _add_list_item)
+    app.router.add_post("/api/lists/{id}/delete", _delete_list)
+    app.router.add_post("/api/lists/items/{id}/toggle", _toggle_list_item)
+    app.router.add_post("/api/lists/items/{id}/delete", _delete_list_item)
     app.router.add_get("/api/system/logs", _system_logs)
     app.router.add_post("/api/system/logs/clear", _system_logs_clear)
     app.router.add_get("/api/admin/users", _admin_list_users)
