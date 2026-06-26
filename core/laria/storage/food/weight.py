@@ -14,7 +14,8 @@ async def add_weight(member: str, weight_kg: float, bmi: float | None) -> dict:
     """Record a weight measurement for a member; return the stored entry."""
     async with connect() as db:
         cur = await db.execute(
-            "INSERT INTO weight_log (member, weight_kg, bmi) VALUES (?, ?, ?)",
+            "INSERT INTO weight_log (member, weight_kg, bmi, logged_at) "
+            "VALUES (?, ?, ?, datetime('now', 'localtime'))",
             (member, weight_kg, bmi),
         )
         await db.commit()
