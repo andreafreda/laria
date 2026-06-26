@@ -7,6 +7,8 @@ or other integrations all consume the same surface. The engine is injected with
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import os
@@ -361,6 +363,76 @@ async def _food_pantry(request: web.Request) -> web.Response:
     })
 
 
+_PROFILE_TEXT_FIELDS = ("sex", "goal", "activity_level", "allergies", "preferences", "restrictions")
+_PROFILE_NUMBER_FIELDS = ("age", "height_cm", "weight_kg", "kcal_target")
+
+
+async def _food_profile_save(request: web.Request) -> web.Response:
+    """Create or update a member's nutrition profile. Body: {member, ...fields}.
+
+    Only the supplied fields change; empty text clears a field. BMI is recomputed
+    from weight and height when both are present, and returned so the UI can show
+    it without a reload.
+    """
+    try:
+        data = await request.json()
+    except (json.JSONDecodeError, ValueError):
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    member = (data.get("member") or "").strip().lower()
+    if not member:
+        return web.json_response({"error": "member is required"}, status=400)
+
+    fields: dict = {}
+    for key in _PROFILE_TEXT_FIELDS:
+        if key in data:
+            fields[key] = (data.get(key) or "").strip() or None
+    for key in _PROFILE_NUMBER_FIELDS:
+        raw = data.get(key)
+        if raw not in (None, ""):
+            try:
+                fields[key] = float(raw)
+            except (TypeError, ValueError):
+                pass
+    weight, height = fields.get("weight_kg"), fields.get("height_cm")
+    if weight and height:
+        fields["bmi"] = round(weight / ((height / 100) ** 2), 1)
+
+    await food.upsert_profile(member, fields)
+    return web.json_response({"ok": True, "bmi": fields.get("bmi")})
+
+
+async def _food_diary_history(request: web.Request) -> web.Response:
+    """Recent days that have logged meals (for the diary chart and history list).
+
+    Query: days (default 30). Each entry has the day, member count, meal count
+    and total calories.
+    """
+    days = int(request.query.get("days", 30))
+    return web.json_response(await food.get_logged_days(days))
+
+
+async def _food_export_csv(request: web.Request) -> web.Response:
+    """Download the meal diary as CSV. Query: date_from, date_to (default 30 days)."""
+    end = date.today()
+    date_from = request.query.get("date_from", (end - timedelta(days=30)).isoformat())
+    date_to = request.query.get("date_to", end.isoformat())
+    rows = await food.export_meals(date_from, date_to)
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["date", "member", "meal", "description", "kcal",
+                     "protein_g", "carbs_g", "fat_g", "logged_by"])
+    for row in rows:
+        writer.writerow([row["eaten_at"], row["member"], row["meal_type"], row["description"],
+                         row["kcal_total"], row["protein_g"], row["carbs_g"], row["fat_g"],
+                         row["logged_by"]])
+    return web.Response(
+        body=buffer.getvalue().encode("utf-8-sig"),
+        content_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="laria_diary_{date_from}_{date_to}.csv"'},
+    )
+
+
 # --------------------------------------------------------------------------- #
 # News briefings (per user) and system error log
 # --------------------------------------------------------------------------- #
@@ -658,6 +730,9 @@ def create_app(engine) -> web.Application:
     app.router.add_get("/api/food/shopping", _food_shopping)
     app.router.add_post("/api/food/shopping/toggle", _food_shopping_toggle)
     app.router.add_get("/api/food/pantry", _food_pantry)
+    app.router.add_post("/api/food/profile", _food_profile_save)
+    app.router.add_get("/api/food/diary/history", _food_diary_history)
+    app.router.add_get("/api/food/export.csv", _food_export_csv)
     app.router.add_get("/api/news/briefings", _news_briefings)
     app.router.add_post("/api/news/briefings", _news_create_briefing)
     app.router.add_post("/api/news/briefings/delete", _news_delete_briefing)

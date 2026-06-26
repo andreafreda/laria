@@ -86,3 +86,30 @@ async def test_pantry(client):
     resp = await client.get("/api/food/pantry", headers=_auth_header())
     pantry = await resp.json()
     assert any(i["name"] == "rice" for i in pantry["items"])
+
+
+async def test_profile_save_computes_bmi(client):
+    headers = _auth_header()
+    saved = await (await client.post("/api/food/profile", headers=headers, json={
+        "member": "sam", "weight_kg": 74, "height_cm": 178, "kcal_target": 2000,
+    })).json()
+    assert saved["ok"] is True
+    assert saved["bmi"] == 23.4
+
+    profiles = await (await client.get("/api/food/profiles", headers=headers)).json()
+    sam = next(p for p in profiles if p["member"] == "sam")
+    assert sam["weight_kg"] == 74.0
+
+
+async def test_diary_history(client):
+    resp = await client.get("/api/food/diary/history?days=30", headers=_auth_header())
+    history = await resp.json()
+    assert any(d["day"] for d in history)
+
+
+async def test_export_csv(client):
+    resp = await client.get("/api/food/export.csv", headers=_auth_header())
+    assert resp.status == 200
+    assert resp.headers["Content-Type"].startswith("text/csv")
+    body = await resp.text()
+    assert "date,member,meal" in body
