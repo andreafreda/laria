@@ -55,6 +55,13 @@ const ACTIVITY = ['', 'sedentary', 'light', 'moderate', 'intense', 'very intense
                   P {{ m.protein_target_g }} / C {{ m.carbs_target_g }} / F {{ m.fat_target_g }} g
                 </div>
               }
+              @if (p.allergies || p.preferences || p.restrictions) {
+                <div class="summary muted">
+                  @if (p.allergies) { allergies: {{ p.allergies }}. }
+                  @if (p.preferences) { likes: {{ p.preferences }}. }
+                  @if (p.restrictions) { avoids: {{ p.restrictions }}. }
+                </div>
+              }
 
               <ion-button fill="clear" size="small" (click)="toggle(p.member)">
                 {{ editing() === p.member ? 'Close' : 'Edit' }}
@@ -88,6 +95,15 @@ const ACTIVITY = ['', 'sedentary', 'light', 'moderate', 'intense', 'very intense
                   </ion-item>
                   <ion-item>
                     <ion-input label="kcal target" type="number" [(ngModel)]="form.kcal_target"></ion-input>
+                  </ion-item>
+                  <ion-item>
+                    <ion-input label="Allergies" [(ngModel)]="form.allergies"></ion-input>
+                  </ion-item>
+                  <ion-item>
+                    <ion-input label="Preferences" [(ngModel)]="form.preferences"></ion-input>
+                  </ion-item>
+                  <ion-item>
+                    <ion-input label="Restrictions" [(ngModel)]="form.restrictions"></ion-input>
                   </ion-item>
                   <ion-button expand="block" class="ion-margin-top" (click)="save(p.member)">Save</ion-button>
                   @if (savedMsg()) { <ion-note color="success">{{ savedMsg() }}</ion-note> }
@@ -165,6 +181,9 @@ export class ProfilesPage implements OnInit {
       goal: profile?.goal ?? '',
       activity_level: profile?.activity_level ?? '',
       kcal_target: profile?.kcal_target ?? null,
+      allergies: profile?.allergies ?? '',
+      preferences: profile?.preferences ?? '',
+      restrictions: profile?.restrictions ?? '',
     };
     this.editing.set(member);
   }
