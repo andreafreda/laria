@@ -6,8 +6,8 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  chatbubbleOutline, walletOutline, restaurantOutline, newspaperOutline,
-  peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
+  homeOutline, chatbubbleOutline, walletOutline, restaurantOutline, personCircleOutline,
+  newspaperOutline, peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
 } from 'ionicons/icons';
 import { AuthService } from './core/auth.service';
 
@@ -29,6 +29,10 @@ import { AuthService } from './core/auth.service';
               <ion-list>
                 <ion-list-header>LARIA</ion-list-header>
                 <ion-menu-toggle auto-hide="false">
+                  <ion-item routerLink="/home" detail="false">
+                    <ion-icon slot="start" name="home-outline"></ion-icon>
+                    <ion-label>Home</ion-label>
+                  </ion-item>
                   <ion-item routerLink="/chat" detail="false">
                     <ion-icon slot="start" name="chatbubble-outline"></ion-icon>
                     <ion-label>Chat</ion-label>
@@ -40,6 +44,10 @@ import { AuthService } from './core/auth.service';
                   <ion-item routerLink="/food" detail="false">
                     <ion-icon slot="start" name="restaurant-outline"></ion-icon>
                     <ion-label>Food</ion-label>
+                  </ion-item>
+                  <ion-item routerLink="/profiles" detail="false">
+                    <ion-icon slot="start" name="person-circle-outline"></ion-icon>
+                    <ion-label>Profiles</ion-label>
                   </ion-item>
                   <ion-item routerLink="/lists" detail="false">
                     <ion-icon slot="start" name="list-outline"></ion-icon>
@@ -83,8 +91,8 @@ export class AppComponent {
 
   constructor() {
     addIcons({
-      chatbubbleOutline, walletOutline, restaurantOutline, newspaperOutline,
-      peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
+      homeOutline, chatbubbleOutline, walletOutline, restaurantOutline, personCircleOutline,
+      newspaperOutline, peopleOutline, warningOutline, logOutOutline, listOutline, alarmOutline,
     });
   }
 

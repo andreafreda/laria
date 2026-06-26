@@ -21,7 +21,7 @@ import { Briefing, NewsService, parseTopics } from '../../core/news.service';
   imports: [
     FormsModule, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonMenuButton,
     IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItem, IonInput,
-    IonTextarea, IonButton, IonNote, IonLabel,
+    IonTextarea, IonButton, IonNote,
   ],
   template: `
     <ion-header>

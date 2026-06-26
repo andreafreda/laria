@@ -9,7 +9,7 @@ import {
 import { addIcons } from 'ionicons';
 import { cloudUploadOutline, chevronBack, chevronForward } from 'ionicons/icons';
 import {
-  Balance, CategoryYear, ExpenseSummary, FinanceService, Goal, MonthTrend,
+  Balance, BudgetStatus, CategoryYear, ExpenseSummary, FinanceService, Goal, MonthTrend,
 } from '../../core/finance.service';
 
 type Period = 'week' | 'month' | 'year';
@@ -87,6 +87,27 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
             <div class="metric-value">{{ net() | number:'1.2-2' }}</div>
           </div>
         </div>
+
+        @if (period() === 'month' && budgets().length) {
+          <ion-card>
+            <ion-card-header><ion-card-title>Budget</ion-card-title></ion-card-header>
+            <ion-card-content>
+              @for (b of budgets(); track b.category) {
+                <div class="row">
+                  <div class="row-top">
+                    <span>{{ b.category }}</span>
+                    <span>{{ b.spent | number:'1.0-0' }} / {{ b.budget | number:'1.0-0' }}
+                      · {{ b.over ? 'over ' + (-b.remaining | number:'1.0-0') : (b.remaining | number:'1.0-0') + ' left' }}</span>
+                  </div>
+                  <div class="bar">
+                    <div class="bar-fill" [class.warn]="b.perc >= 80 && !b.over" [class.over]="b.over"
+                         [style.width.%]="b.perc > 100 ? 100 : b.perc"></div>
+                  </div>
+                </div>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
 
         @if (period() === 'year' && trend().length) {
           <ion-card>
@@ -171,6 +192,8 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     .row-top { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
     .bar { background: var(--laria-surface-muted); border-radius: var(--laria-radius-pill); height: 8px; overflow: hidden; }
     .bar-fill { background: var(--ion-color-primary); height: 100%; border-radius: var(--laria-radius-pill); }
+    .bar-fill.warn { background: #d97706; }
+    .bar-fill.over { background: var(--ion-color-danger); }
     .muted { color: var(--laria-text-muted); font-size: 14px; }
     .chart { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
     .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
@@ -189,6 +212,7 @@ export class DashboardPage implements OnInit {
   readonly summary = signal<ExpenseSummary | null>(null);
   readonly trend = signal<MonthTrend[]>([]);
   readonly categoryYear = signal<CategoryYear[]>([]);
+  readonly budgets = signal<BudgetStatus[]>([]);
 
   readonly income = computed(() => this.totals().income);
   readonly expenses = computed(() => this.totals().expenses);
@@ -238,6 +262,13 @@ export class DashboardPage implements OnInit {
     }
     const [from, to] = this.range();
     this.finance.summary(from, to).subscribe((s) => this.summary.set(s));
+    if (this.period() === 'month') {
+      const first = new Date(from);
+      this.finance.budgetStatus(first.getFullYear(), first.getMonth() + 1)
+        .subscribe((b) => this.budgets.set(b));
+    } else {
+      this.budgets.set([]);
+    }
   }
 
   private totals(): { income: number; expenses: number; net: number } {

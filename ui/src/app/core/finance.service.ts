@@ -39,6 +39,15 @@ export interface CategoryYear {
   months: number[];
 }
 
+export interface BudgetStatus {
+  category: string;
+  budget: number;
+  spent: number;
+  remaining: number;
+  perc: number;
+  over: boolean;
+}
+
 /** Reads the finance dashboards from the API. The data lives in the same store
  *  the assistant uses; these are plain GETs the interceptor authenticates. */
 @Injectable({ providedIn: 'root' })
@@ -78,6 +87,12 @@ export class FinanceService {
   categoryYear(year: number): Observable<CategoryYear[]> {
     const params = new HttpParams().set('year', String(year));
     return this.http.get<CategoryYear[]>(`${this.base}/api/finance/category-year`, { params });
+  }
+
+  /** Budget vs spent for each category in a month. */
+  budgetStatus(year: number, month: number): Observable<BudgetStatus[]> {
+    const params = new HttpParams().set('year', String(year)).set('month', String(month));
+    return this.http.get<BudgetStatus[]>(`${this.base}/api/finance/budget-status`, { params });
   }
 
   /** Upload a bank-statement file to import its movements into an account. */

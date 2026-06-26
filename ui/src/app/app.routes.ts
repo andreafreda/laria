@@ -29,6 +29,16 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/food/food.page').then((m) => m.FoodPage),
   },
   {
+    path: 'profiles',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/profiles/profiles.page').then((m) => m.ProfilesPage),
+  },
+  {
+    path: 'home',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/home/home.page').then((m) => m.HomePage),
+  },
+  {
     path: 'import',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/import/import.page').then((m) => m.ImportPage),
@@ -59,6 +69,6 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./pages/admin/admin.page').then((m) => m.AdminPage),
   },
-  { path: '', redirectTo: 'chat', pathMatch: 'full' },
-  { path: '**', redirectTo: 'chat' },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
+  { path: '**', redirectTo: 'home' },
 ];
