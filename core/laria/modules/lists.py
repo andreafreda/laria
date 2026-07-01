@@ -12,7 +12,8 @@ import json
 from typing import Any
 
 from ..engine.tools import Tool, ToolContext, ToolRegistry
-from ..storage import lists
+from ..scheduler import Scheduler
+from ..storage import lists, misc
 
 
 async def _resolve_list_id(name: str) -> int | None:
@@ -44,16 +45,6 @@ async def _show_lists(inputs: dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps(await lists.get_lists(), ensure_ascii=False)
 
 
-async def _add_item(inputs: dict[str, Any], ctx: ToolContext) -> str:
-    """Add an item to a list, creating the list if it does not exist yet."""
-    list_id = await _resolve_list_id(inputs["list"])
-    if list_id is None:
-        list_id = (await lists.create_list(inputs["list"], inputs.get("kind", "todo")))["id"]
-    item = await lists.add_list_item(list_id, inputs["item"],
-                                     inputs.get("qty"), inputs.get("due_at"))
-    return json.dumps({"ok": True, "added": item}, ensure_ascii=False)
-
-
 async def _show_list(inputs: dict[str, Any], ctx: ToolContext) -> str:
     """Return the items of a named list."""
     list_id = await _resolve_list_id(inputs["list"])
@@ -74,24 +65,52 @@ async def _check_item(inputs: dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"ok": True, "toggled": inputs["item"]}, ensure_ascii=False)
 
 
-async def _remove_item(inputs: dict[str, Any], ctx: ToolContext) -> str:
-    """Remove an item from a list."""
-    list_id = await _resolve_list_id(inputs["list"])
-    if list_id is None:
-        return f"List '{inputs['list']}' not found."
-    item_id = await _resolve_item_id(list_id, inputs["item"])
-    if item_id is None:
-        return f"Item '{inputs['item']}' not found in {inputs['list']}."
-    await lists.delete_list_item(item_id)
-    return json.dumps({"ok": True, "removed": inputs["item"]}, ensure_ascii=False)
-
-
 _LIST = {"type": "string", "description": "List name (case-insensitive)"}
 _ITEM = {"type": "string", "description": "Item text"}
 
 
-def register_lists_tools(registry: ToolRegistry) -> None:
-    """Add the generic list tools so the assistant can manage lists in chat."""
+def register_lists_tools(registry: ToolRegistry, scheduler: Scheduler | None = None) -> None:
+    """Add the generic list tools so the assistant can manage lists in chat.
+
+    ``scheduler`` is optional: when an item is added with a due date, a reminder
+    is created and (if a scheduler is present) scheduled live, so a due item also
+    pings the user. Removing the item cancels that reminder.
+    """
+
+    async def _add_item(inputs: dict[str, Any], ctx: ToolContext) -> str:
+        """Add an item to a list (creating the list if needed); link a reminder
+        when a due date is given."""
+        list_id = await _resolve_list_id(inputs["list"])
+        if list_id is None:
+            list_id = (await lists.create_list(inputs["list"], inputs.get("kind", "todo")))["id"]
+        item = await lists.add_list_item(list_id, inputs["item"],
+                                         inputs.get("qty"), inputs.get("due_at"))
+        due_at = inputs.get("due_at")
+        if due_at:
+            reminder = await misc.add_reminder(
+                ctx.user_id, f"{inputs['list']}: {inputs['item']}", due_at, None)
+            if scheduler is not None:
+                scheduler.schedule_reminder(reminder)
+            await lists.set_item_reminder(item["id"], reminder["id"])
+            item["reminder_id"] = reminder["id"]
+        return json.dumps({"ok": True, "added": item}, ensure_ascii=False)
+
+    async def _remove_item(inputs: dict[str, Any], ctx: ToolContext) -> str:
+        """Remove an item from a list, cancelling its reminder if it had one."""
+        list_id = await _resolve_list_id(inputs["list"])
+        if list_id is None:
+            return f"List '{inputs['list']}' not found."
+        item_id = await _resolve_item_id(list_id, inputs["item"])
+        if item_id is None:
+            return f"Item '{inputs['item']}' not found in {inputs['list']}."
+        reminder_id = await lists.get_item_reminder(item_id)
+        if reminder_id:
+            await misc.deactivate_reminder(reminder_id)
+            if scheduler is not None:
+                scheduler.cancel_reminder(reminder_id)
+        await lists.delete_list_item(item_id)
+        return json.dumps({"ok": True, "removed": inputs["item"]}, ensure_ascii=False)
+
     registry.register(Tool(
         name="create_list",
         description="Create a new named list (kind: todo, checklist, shopping, packing).",

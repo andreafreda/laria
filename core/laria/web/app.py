@@ -580,8 +580,16 @@ async def _add_list_item(request: web.Request) -> web.Response:
         return web.json_response({"error": "text is required"}, status=400)
     if not text:
         return web.json_response({"error": "text is required"}, status=400)
-    item = await lists.add_list_item(
-        list_id, text, data.get("qty") or None, data.get("due_at") or None)
+    due_at = data.get("due_at") or None
+    item = await lists.add_list_item(list_id, text, data.get("qty") or None, due_at)
+    # A due date also creates a reminder under the caller, so the item pings them.
+    # The web process has no scheduler; it fires after the Telegram process reloads
+    # active reminders, like briefings.
+    if due_at:
+        reminder = await misc.add_reminder(
+            str(request[_USER]["sub"]), f"{text}", due_at, None)
+        await lists.set_item_reminder(item["id"], reminder["id"])
+        item["reminder_id"] = reminder["id"]
     return web.json_response(item)
 
 
@@ -592,8 +600,12 @@ async def _toggle_list_item(request: web.Request) -> web.Response:
 
 
 async def _delete_list_item(request: web.Request) -> web.Response:
-    """Delete one item. Path: /api/lists/items/{id}."""
-    deleted = await lists.delete_list_item(int(request.match_info["id"]))
+    """Delete one item, cancelling its reminder if it had one. Path: /api/lists/items/{id}."""
+    item_id = int(request.match_info["id"])
+    reminder_id = await lists.get_item_reminder(item_id)
+    if reminder_id:
+        await misc.deactivate_reminder(reminder_id)
+    deleted = await lists.delete_list_item(item_id)
     return web.json_response({"ok": deleted})
 
 

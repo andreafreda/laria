@@ -71,6 +71,7 @@ async def init_db() -> None:
         await db.executescript(_MISC_SCHEMA)
         await db.executescript(_IDENTITY_SCHEMA)
         await db.executescript(_LISTS_SCHEMA)
+        await _migrate(db)
 
         # Seed generic default categories (idempotent, no personal data).
         for cat in DEFAULT_CATEGORIES:
@@ -78,6 +79,22 @@ async def init_db() -> None:
                 "INSERT OR IGNORE INTO finance_categories (name) VALUES (?)", (cat,)
             )
         await db.commit()
+
+
+async def _migrate(db) -> None:
+    """Apply small additive migrations for databases created before a column existed.
+
+    Only adds columns that ``CREATE TABLE IF NOT EXISTS`` cannot add to an
+    existing table. Each step is guarded so it is safe to run on every startup.
+    """
+    await _add_column_if_missing(db, "list_items", "reminder_id", "INTEGER")
+
+
+async def _add_column_if_missing(db, table: str, column: str, decl: str) -> None:
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    existing = {row[1] for row in await cursor.fetchall()}
+    if column not in existing:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
 _FINANCE_SCHEMA = """
@@ -358,6 +375,7 @@ CREATE TABLE IF NOT EXISTS list_items (
     qty TEXT,
     checked INTEGER NOT NULL DEFAULT 0,
     due_at DATETIME,
+    reminder_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_list_items_list_id ON list_items(list_id);
