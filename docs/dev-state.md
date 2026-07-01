@@ -3,7 +3,35 @@
 > Doc interno (IT). Insieme a `plan.md` è la **fonte di verità**. Se la sessione si
 > compatta, leggere QUESTO per riprendere col dettaglio tecnico. Aggiornare a ogni step.
 
-Ultimo aggiornamento: ENGINE provider-agnostic (`core/laria/engine/`), 38 test verdi.
+Ultimo aggiornamento: 2026-07-01 — parità HARIA raggiunta (core Telegram autonomo + portale web). 186 test verdi, `ng build` pulita, tutto su `main`.
+
+## Stato attuale (2026-07-01)
+
+Merge su `main` completati: `feat/telegram-autonomy` + `feat/lists-due-reminders`.
+
+Core autonomo Telegram (`core/laria/`):
+- `scheduler.py` (APScheduler, cron 5 campi Unix, `schedule_reminder/briefing/cron`).
+- `channels/notifier.py` (scheduler→Telegram: reminder + briefing), `channels/food_jobs.py` (piano 08:00, scadenze 08:30, report settimanale dom 20:00).
+- moduli tool: `reminders`, `news` (briefing CRUD + blocklist), `lists` (liste generiche; due_at→reminder), `services/web_search.py` (ddgs).
+- connettore HA: `connectors/ha/agenda_tools.py` (todo + calendar edit + agenda_overview) + `publish_finance` MQTT (job 15 min in `serve()`).
+- `errors.report_error` (error_log DB + `_error_middleware` web 500 + notifica HA), prompt moduli (orari→ISO/cron).
+- TZ fix: hydration/meals/weight salvano `datetime('now','localtime')`.
+- `telegram.serve()` avvia scheduler + ricarica reminder/briefing + food jobs + MQTT.
+
+Web API (`core/laria/web/app.py`): auth, chat (POST+WS), finance (balances/summary/matrix/budget-status/goals/trend/category-year/import), food (plan/diary/diary.history/profiles/profile[POST]/weight/shopping[+toggle]/pantry/export.csv), news briefings CRUD, system logs, reminders, lists (CRUD+items+toggle), admin owner.
+
+Portale UI (`ui/`, Ionic+Angular, design system teal lockato + dark mode):
+- pagine: Home, Chat, Finance (week/month/year + budget + grafico anno), Food (plan week/month, diary date-nav+chart+storico+CSV, shopping, pantry), Profiles (view/edit+peso), Lists, Reminders, News, System log (owner), Family/Admin (owner), Import, Login, Change-password.
+- shell menu + route + redirect post-login → /home.
+
+Infra: `docker/compose.yaml` due processi (web + telegram profilo), volume condiviso.
+
+Gap residui (vedi `plan.md`): food/bollette su MQTT (solo finance), streaming chat, mobile Capacitor, secret cifrati, OpenAPI, i18n, migrazione `haria.db`, plugin SDK, memory L0-L3, scelta licenza. Docker build non ancora verificato in locale (daemon spento).
+
+---
+
+## Storico (dettaglio porting iniziale)
+Ultimo aggiornamento storico: ENGINE provider-agnostic (`core/laria/engine/`), 38 test verdi.
 
 ## Coordinate
 - Repo LARIA: `C:\projects\laria` → github.com/andreafreda/laria (branch `main`).
