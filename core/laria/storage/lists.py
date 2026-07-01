@@ -64,21 +64,22 @@ async def get_list_items(list_id: int) -> list[dict]:
     """A list's items in display order (unchecked first, then by when added)."""
     async with connect() as db:
         cur = await db.execute(
-            """SELECT id, text, qty, checked, due_at FROM list_items
+            """SELECT id, text, qty, checked, due_at, reminder_id FROM list_items
                WHERE list_id = ? ORDER BY checked, id""",
             (int(list_id),),
         )
         rows = await cur.fetchall()
     return [{"id": r[0], "text": r[1], "qty": r[2],
-             "checked": bool(r[3]), "due_at": r[4]} for r in rows]
+             "checked": bool(r[3]), "due_at": r[4], "reminder_id": r[5]} for r in rows]
 
 
 async def add_list_item(list_id: int, text: str, qty: str | None = None,
                         due_at: str | None = None) -> dict:
     """Add one item to a list; return the stored item.
 
-    ``due_at`` is an optional 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM' local-time string;
-    wiring it to a reminder is a separate step, here it is just recorded.
+    ``due_at`` is an optional 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM' local-time string.
+    Linking it to a reminder is done by the caller, which records the new reminder
+    id with ``set_item_reminder``.
     """
     async with connect() as db:
         cur = await db.execute(
@@ -88,7 +89,27 @@ async def add_list_item(list_id: int, text: str, qty: str | None = None,
         await db.commit()
         item_id = cur.lastrowid
     return {"id": item_id, "list_id": int(list_id), "text": text,
-            "qty": qty, "checked": False, "due_at": due_at}
+            "qty": qty, "checked": False, "due_at": due_at, "reminder_id": None}
+
+
+async def set_item_reminder(item_id: int, reminder_id: int | None) -> None:
+    """Record (or clear) the reminder linked to an item's due date."""
+    async with connect() as db:
+        await db.execute(
+            "UPDATE list_items SET reminder_id = ? WHERE id = ?",
+            (reminder_id, int(item_id)),
+        )
+        await db.commit()
+
+
+async def get_item_reminder(item_id: int) -> int | None:
+    """The reminder id linked to an item, or None. Used to clean up on delete."""
+    async with connect() as db:
+        cur = await db.execute(
+            "SELECT reminder_id FROM list_items WHERE id = ?", (int(item_id),)
+        )
+        row = await cur.fetchone()
+    return row[0] if row else None
 
 
 async def toggle_list_item(item_id: int) -> bool:

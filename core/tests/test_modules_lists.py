@@ -69,3 +69,47 @@ async def test_check_and_remove_item(db):
 async def test_unknown_list(db):
     result = await _registry().dispatch("show_list", {"list": "nope"}, _ctx())
     assert "not found" in result
+
+
+class StubScheduler:
+    def __init__(self):
+        self.scheduled = []
+        self.cancelled = []
+
+    def schedule_reminder(self, reminder):
+        self.scheduled.append(reminder)
+        return True
+
+    def cancel_reminder(self, reminder_id):
+        self.cancelled.append(reminder_id)
+
+
+async def test_due_date_creates_and_links_reminder(db):
+    from laria.storage import misc
+    scheduler = StubScheduler()
+    registry = ToolRegistry()
+    register_lists_tools(registry, scheduler)
+
+    await registry.dispatch(
+        "add_to_list", {"list": "todo", "item": "pay rent", "due_at": "2099-01-01 09:00"}, _ctx())
+
+    assert len(scheduler.scheduled) == 1
+    reminders = await misc.get_user_reminders("u1")
+    assert reminders[0]["message"] == "todo: pay rent"
+    items = json.loads(await registry.dispatch("show_list", {"list": "todo"}, _ctx()))
+    assert items[0]["reminder_id"] == reminders[0]["id"]
+
+
+async def test_removing_item_cancels_reminder(db):
+    from laria.storage import misc
+    scheduler = StubScheduler()
+    registry = ToolRegistry()
+    register_lists_tools(registry, scheduler)
+    await registry.dispatch(
+        "add_to_list", {"list": "todo", "item": "pay rent", "due_at": "2099-01-01 09:00"}, _ctx())
+    reminder_id = (await misc.get_user_reminders("u1"))[0]["id"]
+
+    await registry.dispatch("remove_list_item", {"list": "todo", "item": "pay rent"}, _ctx())
+
+    assert reminder_id in scheduler.cancelled
+    assert await misc.get_user_reminders("u1") == []
