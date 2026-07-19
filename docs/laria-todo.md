@@ -42,11 +42,29 @@ resta per un prodotto completo/vendibile. Aggiornato 2026-07-20.
 - [ ] **Licenza**: BSL 1.1 vs PolyForm + edizione/change-date.
 - [ ] **Target deploy iniziale**: self-host Docker vs cloud.
 
-## Priorità suggerita
+## Priorità (Telegram-first; frontend in coda)
 
-1. Fix climate + resolve-entity in LARIA (robustezza HA).
-2. Verifica docker build.
-3. Migrazione `haria.db` (partire coi dati veri).
-4. Notifiche eventi/compleanni/onomastici.
-5. Chat streaming.
-Il resto = maturazione.
+Obiettivo: usare LARIA **subito via Telegram**, senza dipendere dal portale.
+Il frontend web resta valido ma va **in fondo**.
+
+1. **Uso reale via Telegram** (sbloccante):
+   - configurare `.env`: `ANTHROPIC_API_KEY` vero, `TELEGRAM_TOKEN` (bot separato
+     da HARIA), `LARIA_ADMIN_*`, `LARIA_JWT_SECRET`, DB su volume; HA opzionale
+     (`HA_ENABLED`+`HA_URL`+`HA_TOKEN`) se si vuole comandare casa.
+   - creare l'utente + link `telegram_chat_id` (via admin/CLI).
+   - avviare il processo Telegram (`python -m laria.channels.telegram` o
+     `docker compose --profile telegram`), verificare chat + reminder/briefing +
+     food/finance end-to-end su Telegram.
+2. **Robustezza HA** (serve appena si comanda casa): fix climate turn_off/on +
+   resolve nome→entity_id.
+3. **Migrazione `haria.db`**: importare i dati veri così si parte con lo storico.
+4. **Notifiche eventi/compleanni/onomastici**.
+5. **Verifica docker build** + doc deploy.
+6. Chat streaming, MQTT food/bollette, memory L0-L3, ecc. (maturazione backend).
+
+### In coda (dopo che Telegram è solido)
+- **Frontend/portale web**: rifiniture pagine, test UI Angular, streaming in UI.
+- **Mobile** Capacitor.
+
+Nota: il portale è un "in più" (come da premessa). Con Telegram funzionante
+LARIA è già usabile in casa; l'UI web arriva dopo.
