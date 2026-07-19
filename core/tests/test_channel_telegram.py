@@ -81,6 +81,43 @@ async def test_empty_text_is_ignored(db):
     assert engine.calls == []
 
 
+async def test_claim_links_owner_chat(db):
+    os.environ["LARIA_TELEGRAM_CLAIM_CODE"] = "secret123"
+    os.environ["LARIA_ADMIN_USER"] = "owner"
+    reload_settings()
+    owner_id = await identity.create_user("owner", "h", role="owner")
+    engine, client = StubEngine(), StubClient()
+
+    handled = await handle_update(_text_update(500, "/claim secret123"), engine, client)
+
+    assert handled is True
+    assert (await identity.get_user_by_telegram("500"))["id"] == owner_id
+    assert "now linked" in client.sent[0][1]
+    # after claiming, a normal message runs the engine as the owner
+    await handle_update(_text_update(500, "hi"), engine, client)
+    assert engine.calls[-1][0] == str(owner_id)
+    os.environ.pop("LARIA_TELEGRAM_CLAIM_CODE", None)
+    os.environ.pop("LARIA_ADMIN_USER", None)
+    reload_settings()
+
+
+async def test_claim_wrong_code_is_refused(db):
+    os.environ["LARIA_TELEGRAM_CLAIM_CODE"] = "secret123"
+    os.environ["LARIA_ADMIN_USER"] = "owner"
+    reload_settings()
+    await identity.create_user("owner", "h", role="owner")
+    engine, client = StubEngine(), StubClient()
+
+    handled = await handle_update(_text_update(500, "/claim nope"), engine, client)
+
+    assert handled is False
+    assert "not linked" in client.sent[0][1]
+    assert await identity.get_user_by_telegram("500") is None
+    os.environ.pop("LARIA_TELEGRAM_CLAIM_CODE", None)
+    os.environ.pop("LARIA_ADMIN_USER", None)
+    reload_settings()
+
+
 async def test_reset_command_sets_temp_password(db):
     os.environ["LARIA_JWT_SECRET"] = "test-secret"
     reload_settings()

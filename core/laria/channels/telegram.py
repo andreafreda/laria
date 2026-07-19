@@ -74,6 +74,8 @@ async def handle_update(update: dict, engine: Engine, client: TelegramClient) ->
 
     user = await identity.get_user_by_telegram(str(chat_id))
     if user is None:
+        if await _try_claim(text, chat_id, client):
+            return True
         await client.send_message(chat_id, "This chat is not linked to a LARIA account.")
         return False
 
@@ -82,6 +84,36 @@ async def handle_update(update: dict, engine: Engine, client: TelegramClient) ->
 
     reply = await engine.chat(str(user["id"]), text, {})
     await client.send_message(chat_id, reply)
+    return True
+
+
+async def _try_claim(text: str, chat_id: int, client: TelegramClient) -> bool:
+    """Link an unlinked chat to the owner via a one-time claim code.
+
+    A first-run bootstrap so the bot is usable without the web UI: the admin
+    sets LARIA_TELEGRAM_CLAIM_CODE, then sends "/claim <code>" (or
+    "/start <code>") from the chat that should become the owner's. Returns True
+    when the message was a claim attempt (handled with a reply), False otherwise
+    so normal refusal applies. Claiming is refused once the owner already has a
+    linked chat.
+    """
+    settings = get_settings()
+    code = settings.telegram_claim_code
+    if not code:
+        return False
+    parts = text.split()
+    if parts[0] not in ("/claim", "/start") or len(parts) < 2 or parts[1] != code:
+        return False
+
+    owner = await identity.get_user_by_username(settings.auth.admin_user)
+    if owner is None:
+        return False
+    if owner.get("telegram_chat_id"):
+        await client.send_message(chat_id, "LARIA is already linked to another chat.")
+        return True
+    await identity.link_telegram(owner["id"], str(chat_id))
+    await client.send_message(
+        chat_id, "This chat is now linked to LARIA. Ask me anything, for example: what can you do?")
     return True
 
 
@@ -180,6 +212,7 @@ def serve() -> None:
 
     async def _main() -> None:
         await init_db()
+        await auth.ensure_owner()  # seed the owner so a chat can claim it
         async with aiohttp.ClientSession() as session:
             client = TelegramClient(settings.telegram_token, session)
             notifier = TelegramNotifier(client, get_provider(settings))

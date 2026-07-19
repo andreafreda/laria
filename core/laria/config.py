@@ -86,6 +86,10 @@ class Settings:
     db_path: str = field(default_factory=lambda: _env("LARIA_DB_PATH", "./data/laria.db"))
     log_level: str = field(default_factory=lambda: _env("LARIA_LOG_LEVEL", "info"))
     telegram_token: str = field(default_factory=lambda: _env("TELEGRAM_TOKEN"))
+    # One-time bootstrap: an unlinked Telegram chat that sends "/claim <code>"
+    # matching this value is linked to the owner account, so the bot is usable
+    # without the web UI. Empty (default) disables claiming.
+    telegram_claim_code: str = field(default_factory=lambda: _env("LARIA_TELEGRAM_CLAIM_CODE"))
     web_host: str = field(default_factory=lambda: _env("WEB_HOST", "0.0.0.0"))
     web_port: int = field(default_factory=lambda: _env_int("WEB_PORT", 8080))
     # USDA FoodData Central key for nutrition lookups (DEMO_KEY works, rate-limited).
