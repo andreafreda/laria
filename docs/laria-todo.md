@@ -32,7 +32,9 @@ resta per un prodotto completo/vendibile. Aggiornato 2026-07-20.
 - [ ] **Secret cifrati** at-rest.
 - [ ] **OpenAPI** docs + **observability** (log strutturati, metriche, health).
 - [ ] **i18n** (UI + risposte).
-- [ ] **Migrazione `haria.db`**: importare dati esistenti (economia/cibo/storico).
+- [x] **Migrazione `haria.db`** (FATTO): dati veri importati in prod NAS via
+      `tools/migrate_haria.py` (1891 tx + conti/categorie/regole/budget/obiettivi,
+      bollette, food, reminder/briefing rimappati). Backup su NAS.
 - [ ] **Plugin SDK** (formalizzare il registry moduli) + **backup** nativo.
 - [ ] **Memory engine L0-L3** (oggi solo wrapper mem0).
 - [ ] **Test UI** Angular (unit + e2e); oggi solo pytest backend.
@@ -66,7 +68,7 @@ Il frontend web resta valido ma va **in fondo**.
 3. **Deploy** (FATTO): produzione su **NAS QNAP** via GHCR + Watchtower
    (auto-update a ogni push su main), compose + `.env` con segreti veri,
    LARIA cappata 0.5 CPU/512M. Vedi memoria `project_laria_deploy`.
-4. **Migrazione `haria.db`**: importare i dati veri così si parte con lo storico.
+4. Migrazione haria.db: FATTA (vedi sopra).
 4. **Notifiche eventi/compleanni/onomastici**.
 5. **Verifica docker build** + doc deploy.
 6. Chat streaming, MQTT food/bollette, memory L0-L3, ecc. (maturazione backend).
