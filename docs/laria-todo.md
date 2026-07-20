@@ -17,12 +17,13 @@ resta per un prodotto completo/vendibile. Aggiornato 2026-07-20.
 
 ## Feature nuove (richieste)
 
-- [ ] **Notifiche eventi ricorrenti**: compleanni, onomastici, anniversari e
-      simili. Idea: anagrafica date (per profilo/persona) + job giornaliero che
-      genera un promemoria/notifica (Telegram + eventuale push HA) il giorno
-      dell'evento, con anticipo configurabile. Onomastici: mappa nome → data
-      dal calendario dei santi (o tabella). Integrare con i profili esistenti e
-      con lo scheduler/notifier già presenti.
+- [x] **Notifiche eventi ricorrenti** (compleanni/anniversari/custom): FATTO —
+      tabella `events` + tool `add_event/list_events/delete_event` + job giornaliero
+      08:00 (`notifier.send_due_events`), anticipo configurabile (`notify_days_before`).
+- [ ] **Onomastici**: mappa nome→data (calendario santi IT) + notifica onomastico.
+      Rimandato (serve il dataset santi). Aggancio: stesso `events` con kind=nameday.
+- [ ] **Push HA** per gli eventi (oltre a Telegram): opzionale, via `persistent_notification`
+      o notify mobile quando HA abilitato.
 
 ## Prodotto / release (grossi)
 
