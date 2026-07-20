@@ -47,7 +47,12 @@ resta per un prodotto completo/vendibile. Aggiornato 2026-07-20.
 Obiettivo: usare LARIA **subito via Telegram**, senza dipendere dal portale.
 Il frontend web resta valido ma va **in fondo**.
 
-1. **Uso reale via Telegram** (sbloccante):
+> STATO 2026-07-20: LARIA **in uso** via Telegram da docker locale (container
+> `laria-telegram`, volume `laria-data`). Chat + tool + **HA control** funzionanti.
+> Fatti: claim bootstrap, owner seed, fix climate turn_off/on (HARIA + LARIA),
+> HA abilitato (`HA_URL=192.168.1.32:8123`). Resta: consolidare deploy, NAS.
+
+1. **Uso reale via Telegram** (FATTO):
    - configurare `.env`: `ANTHROPIC_API_KEY` vero, `TELEGRAM_TOKEN` (bot separato
      da HARIA), `LARIA_ADMIN_*`, `LARIA_JWT_SECRET`, DB su volume; HA opzionale
      (`HA_ENABLED`+`HA_URL`+`HA_TOKEN`) se si vuole comandare casa.
@@ -55,9 +60,11 @@ Il frontend web resta valido ma va **in fondo**.
    - avviare il processo Telegram (`python -m laria.channels.telegram` o
      `docker compose --profile telegram`), verificare chat + reminder/briefing +
      food/finance end-to-end su Telegram.
-2. **Robustezza HA** (serve appena si comanda casa): fix climate turn_off/on +
-   resolve nome→entity_id.
-3. **Migrazione `haria.db`**: importare i dati veri così si parte con lo storico.
+2. **Robustezza HA**: fix climate turn_off/on FATTO. Resta: resolve nome→entity_id
+   (ora mitigato rinominando le entità con id chiari lato HA).
+3. **Consolidare deploy**: compose + `.env` (gitignored), password/JWT veri
+   (ora demo), `--restart` + autostart Docker. Poi replica su **NAS**.
+4. **Migrazione `haria.db`**: importare i dati veri così si parte con lo storico.
 4. **Notifiche eventi/compleanni/onomastici**.
 5. **Verifica docker build** + doc deploy.
 6. Chat streaming, MQTT food/bollette, memory L0-L3, ecc. (maturazione backend).
