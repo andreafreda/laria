@@ -17,22 +17,29 @@ from laria.modules import register_events_tools
 from laria.storage import init_db
 
 
-def _event(month, day, notify_days_before=0, kind="birthday", label="x"):
-    return {"month": month, "day": day, "notify_days_before": notify_days_before,
+def _event(month, day, notify_offsets=(0,), kind="birthday", label="x"):
+    return {"month": month, "day": day, "notify_offsets": list(notify_offsets),
             "kind": kind, "label": label}
 
 
-def test_due_on_the_day():
-    e = _event(3, 12)
+def test_due_on_the_day_only():
+    e = _event(3, 12, notify_offsets=[0])
     assert events_module.is_due(e, date(2026, 3, 12)) is True
     assert events_module.is_due(e, date(2026, 3, 11)) is False
 
 
-def test_notify_days_before_window():
-    e = _event(3, 12, notify_days_before=3)
-    assert events_module.is_due(e, date(2026, 3, 9)) is True   # 3 days before
-    assert events_module.is_due(e, date(2026, 3, 8)) is False  # 4 days before
-    assert events_module.days_until(e, date(2026, 3, 9)) == 3
+def test_offsets_are_discrete_not_a_window():
+    e = _event(3, 12, notify_offsets=[7, 1, 0])
+    assert events_module.is_due(e, date(2026, 3, 5)) is True    # 7 days before
+    assert events_module.is_due(e, date(2026, 3, 11)) is True   # 1 day before
+    assert events_module.is_due(e, date(2026, 3, 12)) is True   # the day
+    assert events_module.is_due(e, date(2026, 3, 10)) is False  # 2 days before: not configured
+    assert events_module.is_due(e, date(2026, 3, 6)) is False   # 6 days before
+
+
+def test_month_before():
+    e = _event(3, 12, notify_offsets=[30])
+    assert events_module.is_due(e, date(2026, 2, 10)) is True   # 30 days before
 
 
 def test_year_wrap():
@@ -42,14 +49,15 @@ def test_year_wrap():
 
 def test_leap_day_observed_on_28_in_non_leap_year():
     e = _event(2, 29)
-    # 2026 is not a leap year -> observed on Feb 28
     assert events_module.days_until(e, date(2026, 2, 28)) == 0
 
 
-def test_message_today_vs_future():
-    e = _event(3, 12, kind="birthday", label="Marina")
+def test_message_phrases():
+    e = _event(3, 12, notify_offsets=[30, 7, 1, 0], label="Marina")
     assert "today" in events_module.event_message(e, date(2026, 3, 12))
-    assert "in 2 days" in events_module.event_message(e, date(2026, 3, 10))
+    assert "tomorrow" in events_module.event_message(e, date(2026, 3, 11))
+    assert "in a week" in events_module.event_message(e, date(2026, 3, 5))
+    assert "in a month" in events_module.event_message(e, date(2026, 2, 10))
 
 
 @pytest.fixture
@@ -73,13 +81,15 @@ async def test_add_list_delete_event(db):
     register_events_tools(registry)
 
     created = json.loads(await registry.dispatch(
-        "add_event", {"label": "Marina's birthday", "kind": "birthday",
-                      "month": 3, "day": 12, "notify_days_before": 2}, _ctx()))
+        "add_event", {"label": "Anniversario matrimonio", "kind": "anniversary",
+                      "month": 6, "day": 20, "notify_offsets": [30, 7, 1, 0]}, _ctx()))
     assert created["ok"] is True
+    assert created["event"]["notify_offsets"] == [0, 1, 7, 30]
     event_id = created["event"]["id"]
 
     listed = json.loads(await registry.dispatch("list_events", {}, _ctx()))
-    assert listed[0]["label"] == "Marina's birthday"
+    assert listed[0]["label"] == "Anniversario matrimonio"
+    assert listed[0]["notify_offsets"] == [0, 1, 7, 30]
 
     await registry.dispatch("delete_event", {"id": event_id}, _ctx())
     assert await registry.dispatch("list_events", {}, _ctx()) == "No events yet."

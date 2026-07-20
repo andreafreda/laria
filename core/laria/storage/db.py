@@ -89,6 +89,9 @@ async def _migrate(db) -> None:
     existing table. Each step is guarded so it is safe to run on every startup.
     """
     await _add_column_if_missing(db, "list_items", "reminder_id", "INTEGER")
+    # events gained per-offset notifications (CSV of day-offsets) after an early
+    # single-window column; add it for databases created before the change.
+    await _add_column_if_missing(db, "events", "notify_offsets", "TEXT NOT NULL DEFAULT '0'")
 
 
 async def _add_column_if_missing(db, table: str, column: str, decl: str) -> None:
@@ -390,7 +393,7 @@ CREATE TABLE IF NOT EXISTS events (
     kind TEXT NOT NULL DEFAULT 'custom',
     month INTEGER NOT NULL,
     day INTEGER NOT NULL,
-    notify_days_before INTEGER NOT NULL DEFAULT 0,
+    notify_offsets TEXT NOT NULL DEFAULT '0',
     active INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

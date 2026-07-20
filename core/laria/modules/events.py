@@ -39,18 +39,36 @@ def days_until(event: dict, today: date) -> int:
     return (next_occurrence(event["month"], event["day"], today) - today).days
 
 
+def _offsets(event: dict) -> list[int]:
+    return event.get("notify_offsets") or [0]
+
+
 def is_due(event: dict, today: date) -> bool:
-    """True when the event should be announced today (on the day or within its
-    notify-days-before lead time)."""
-    return 0 <= days_until(event, today) <= event.get("notify_days_before", 0)
+    """True when today is exactly one of the event's configured lead days.
+
+    Offsets are discrete (e.g. [30, 7, 1, 0]): the event announces a month
+    before, a week before, the day before, and on the day, and stays silent on
+    the days in between.
+    """
+    return days_until(event, today) in _offsets(event)
+
+
+def _lead_phrase(remaining: int) -> str:
+    if remaining == 0:
+        return "today"
+    if remaining == 1:
+        return "tomorrow"
+    if remaining == 7:
+        return "in a week"
+    if remaining in (30, 31):
+        return "in a month"
+    return f"in {remaining} days"
 
 
 def event_message(event: dict, today: date) -> str:
-    """The notification line for a due event ("today" vs "in N days")."""
+    """The notification line for a due event, phrased by how far off it is."""
     icon = _KIND_ICON.get(event["kind"], "📅")
-    remaining = days_until(event, today)
-    when = "today" if remaining == 0 else f"in {remaining} day{'s' if remaining != 1 else ''}"
-    return f"{icon} {event['label']} — {when}"
+    return f"{icon} {event['label']} — {_lead_phrase(days_until(event, today))}"
 
 
 def register_events_tools(registry: ToolRegistry) -> None:
@@ -60,7 +78,7 @@ def register_events_tools(registry: ToolRegistry) -> None:
         event = await events.add_event(
             ctx.user_id, inputs["label"], inputs.get("kind", "custom"),
             int(inputs["month"]), int(inputs["day"]),
-            int(inputs.get("notify_days_before") or 0))
+            inputs.get("notify_offsets") or [0])
         return json.dumps({"ok": True, "event": event}, ensure_ascii=False)
 
     async def _list_events(inputs: dict, ctx: ToolContext) -> str:
@@ -75,7 +93,9 @@ def register_events_tools(registry: ToolRegistry) -> None:
         name="add_event",
         description=("Add a yearly recurring event (birthday, anniversary, nameday, custom). "
                      "Convert the user's date to month (1-12) and day (1-31). "
-                     "notify_days_before announces it early (0 = only on the day)."),
+                     "notify_offsets is the list of days-before to announce on: "
+                     "0=on the day, 1=day before, 7=a week before, 30=a month before. "
+                     "Include every lead time the user asks for, e.g. [30,7,1,0]."),
         input_schema={
             "type": "object",
             "properties": {
@@ -84,8 +104,11 @@ def register_events_tools(registry: ToolRegistry) -> None:
                          "description": "Event kind (default custom)"},
                 "month": {"type": "integer", "description": "Month 1-12"},
                 "day": {"type": "integer", "description": "Day 1-31"},
-                "notify_days_before": {"type": "integer",
-                                       "description": "Announce this many days early (default 0)"},
+                "notify_offsets": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "Days-before to notify (e.g. [30,7,2,1,0]). Default [0].",
+                },
             },
             "required": ["label", "month", "day"],
         },
