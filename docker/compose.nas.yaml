@@ -1,0 +1,40 @@
+# LARIA on the NAS (QNAP Container Station), Telegram bot + auto-update.
+#
+# One-time setup on the NAS:
+#   1. Put this file and a `.env` (copy from .env.example, fill the secrets) in a
+#      folder, e.g. /share/Container/laria/.
+#   2. Container Station -> Applications -> Create -> point at this compose file.
+#      (Or over SSH: `docker compose -f compose.nas.yaml up -d`.)
+#
+# After that, updates are automatic: a push to main builds and publishes
+# ghcr.io/andreafreda/laria:latest, and Watchtower here pulls it and recreates
+# the bot. The named volume keeps the database across updates.
+
+services:
+  laria-telegram:
+    image: ghcr.io/andreafreda/laria:latest
+    command: ["python", "-m", "laria.channels.telegram"]
+    env_file: .env
+    environment:
+      LARIA_DATA_DIR: /data
+      LARIA_DB_PATH: /data/laria.db
+    volumes:
+      - laria-data:/data
+    restart: unless-stopped
+    # Keep LARIA light so it never crowds the Home Assistant VM on the NAS.
+    cpus: 0.5
+    mem_limit: 512m
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    command: --label-enable --cleanup --interval 300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    # Only watches containers labeled watchtower.enable=true (just LARIA), polls
+    # every 5 minutes, and removes the old image after updating.
+
+volumes:
+  laria-data:
