@@ -63,8 +63,9 @@ Il frontend web resta valido ma va **in fondo**.
      food/finance end-to-end su Telegram.
 2. **Robustezza HA**: fix climate turn_off/on FATTO. Resta: resolve nome→entity_id
    (ora mitigato rinominando le entità con id chiari lato HA).
-3. **Consolidare deploy**: compose + `.env` (gitignored), password/JWT veri
-   (ora demo), `--restart` + autostart Docker. Poi replica su **NAS**.
+3. **Deploy** (FATTO): produzione su **NAS QNAP** via GHCR + Watchtower
+   (auto-update a ogni push su main), compose + `.env` con segreti veri,
+   LARIA cappata 0.5 CPU/512M. Vedi memoria `project_laria_deploy`.
 4. **Migrazione `haria.db`**: importare i dati veri così si parte con lo storico.
 4. **Notifiche eventi/compleanni/onomastici**.
 5. **Verifica docker build** + doc deploy.
