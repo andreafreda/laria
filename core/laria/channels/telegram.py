@@ -221,6 +221,7 @@ def serve() -> None:
             scheduler.start()
             await _load_scheduled_jobs(scheduler)
             _schedule_food_jobs(scheduler, FoodBroadcaster(client))
+            scheduler.schedule_cron("events_daily", "0 8 * * *", notifier.send_due_events)
             _schedule_mqtt_mirror(scheduler, settings)
             await run(engine, client)
 

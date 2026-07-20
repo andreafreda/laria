@@ -8,11 +8,13 @@ calls, kept separate so the scheduler stays delivery-agnostic and testable.
 from __future__ import annotations
 
 import logging
+from datetime import date
 from typing import TYPE_CHECKING
 
 from ..llm import LLMProvider
+from ..modules import events as events_module
 from ..modules import news
-from ..storage import identity, misc
+from ..storage import events, identity, misc
 
 if TYPE_CHECKING:
     from .telegram import TelegramClient
@@ -64,6 +66,25 @@ class TelegramNotifier:
             await self._client.send_message(int(chat_id), text)
         except Exception as error:
             logger.error("failed to send briefing %s: %s", briefing.get("id"), error)
+
+    async def send_due_events(self) -> None:
+        """Announce every recurring event due today to its owner's chat.
+
+        Run once a day by the scheduler. "Due" includes the notify-days-before
+        lead time, so an event can be announced a few days early.
+        """
+        today = date.today()
+        for event in await events.get_active_events():
+            if not events_module.is_due(event, today):
+                continue
+            chat_id = await self._resolve_chat_id(event["user_id"])
+            if chat_id is None:
+                continue
+            try:
+                await self._client.send_message(
+                    int(chat_id), events_module.event_message(event, today))
+            except Exception as error:
+                logger.error("failed to send event %s: %s", event.get("id"), error)
 
     async def _resolve_chat_id(self, user_id: str) -> str | None:
         """Map a stored user id to its linked Telegram chat id, or None.

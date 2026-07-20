@@ -71,6 +71,7 @@ async def init_db() -> None:
         await db.executescript(_MISC_SCHEMA)
         await db.executescript(_IDENTITY_SCHEMA)
         await db.executescript(_LISTS_SCHEMA)
+        await db.executescript(_EVENTS_SCHEMA)
         await _migrate(db)
 
         # Seed generic default categories (idempotent, no personal data).
@@ -379,4 +380,19 @@ CREATE TABLE IF NOT EXISTS list_items (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_list_items_list_id ON list_items(list_id);
+"""
+
+_EVENTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    label TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'custom',
+    month INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    notify_days_before INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_events_active ON events(active);
 """

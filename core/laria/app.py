@@ -13,6 +13,7 @@ from .engine import Engine, ToolRegistry
 from .llm import get_provider
 from .memory import get_memory_backend
 from .modules import (
+    register_events_tools,
     register_finance_tools,
     register_food_tools,
     register_lists_tools,
@@ -45,6 +46,7 @@ def build_engine(settings: Settings | None = None,
     register_finance_tools(registry)
     register_food_tools(registry)
     register_utilities_tools(registry)
+    register_events_tools(registry)
     register_lists_tools(registry, scheduler)
     register_reminders_tools(registry, scheduler)
     register_news_tools(registry, provider, scheduler)
