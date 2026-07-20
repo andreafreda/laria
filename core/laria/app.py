@@ -19,6 +19,7 @@ from .modules import (
     register_lists_tools,
     register_news_tools,
     register_reminders_tools,
+    register_search_tools,
     register_utilities_tools,
 )
 from .scheduler import Scheduler
@@ -47,6 +48,7 @@ def build_engine(settings: Settings | None = None,
     register_food_tools(registry)
     register_utilities_tools(registry)
     register_events_tools(registry)
+    register_search_tools(registry)
     register_lists_tools(registry, scheduler)
     register_reminders_tools(registry, scheduler)
     register_news_tools(registry, provider, scheduler)

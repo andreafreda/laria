@@ -12,6 +12,7 @@ from .food import register_food_tools
 from .lists import register_lists_tools
 from .news import register_news_tools
 from .reminders import register_reminders_tools
+from .search import register_search_tools
 from .utilities import register_utilities_tools
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "register_lists_tools",
     "register_news_tools",
     "register_reminders_tools",
+    "register_search_tools",
     "register_utilities_tools",
 ]
