@@ -49,11 +49,23 @@ class HaClient:
 
     async def call_service(self, domain: str, service: str, data: dict,
                            return_response: bool = False) -> dict:
-        """Call an HA service (e.g. light.turn_on) and return its JSON response."""
-        path = f"/api/services/{domain}/{service}"
-        if return_response:
-            path += "?return_response"
-        return await self._post(path, data)
+        """Call an HA service (e.g. light.turn_on) and return its JSON response.
+
+        Some climate entities do not implement turn_off/turn_on; HA answers 400
+        (or 500 on some versions). In that case retry with set_hvac_mode, which
+        every climate with the matching mode accepts, so "turn the AC off" works
+        regardless. The normal path is untouched: the fallback fires only on that
+        error.
+        """
+        try:
+            return await self._post(_service_path(domain, service, return_response), data)
+        except aiohttp.ClientResponseError as error:
+            fallback_mode = _climate_hvac_fallback(domain, service, error.status)
+            if fallback_mode is None:
+                raise
+            return await self._post(
+                _service_path("climate", "set_hvac_mode", return_response),
+                {**data, "hvac_mode": fallback_mode})
 
     async def get_calendar_events(self, entity_id: str,
                                   start_iso: str, end_iso: str) -> list[dict]:
@@ -117,3 +129,21 @@ class HaClient:
             raise PermissionError("Home Assistant token invalid or expired")
         resp.raise_for_status()
         return await resp.json()
+
+
+def _service_path(domain: str, service: str, return_response: bool) -> str:
+    path = f"/api/services/{domain}/{service}"
+    return path + "?return_response" if return_response else path
+
+
+def _climate_hvac_fallback(domain: str, service: str, status: int) -> str | None:
+    """The hvac mode to retry a failed climate turn_off/turn_on with.
+
+    Returns None when there is no sensible fallback (different domain/service, or
+    an error other than the "service not supported" 400/500), so the caller
+    re-raises the original error. turn_on has no single right mode, so use
+    'auto', which most climate entities expose.
+    """
+    if status not in (400, 500) or domain != "climate":
+        return None
+    return {"turn_off": "off", "turn_on": "auto"}.get(service)
