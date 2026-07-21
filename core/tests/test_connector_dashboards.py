@@ -37,6 +37,7 @@ def test_utility_english_mapping():
     assert d._utility_en("corrente") == "electricity"
     assert d._utility_en("acqua") == "water"
     assert d._utility_en("telefono") == "telefono"  # unknown -> slug
+    assert d._metric_en("costo") == "cost"  # actual migrated data token
     assert d._metric_en("eur") == "cost"
     assert d._metric_en("kwh") == "kwh"
 

@@ -31,8 +31,12 @@ _STATE_UTILITY = "laria/utility"
 _STATE_DIET = "laria/diet"
 
 # Structural translation for the utility series (instance data is Italian).
+# HA composes an MQTT entity's id as slug(device_name)_slug(name) when a device
+# and name are given, so these translated words drive the final entity_id. The
+# migrated data stores the cost metric as Italian "costo"; map it (and the older
+# "eur" token) to "cost".
 _UTILITY_EN = {"corrente": "electricity", "acqua": "water", "gas": "gas"}
-_METRIC_EN = {"eur": "cost", "kwh": "kwh", "m3": "m3"}
+_METRIC_EN = {"costo": "cost", "eur": "cost", "kwh": "kwh", "m3": "m3"}
 
 
 def _utility_en(name: str) -> str:
@@ -244,7 +248,7 @@ async def _member_sensors(member: str, today: date) -> list[Sensor]:
         weight = stats["latest"]
         bmi = stats["latest_bmi"] if stats["latest_bmi"] is not None else (
             profile.get("bmi") if profile else None)
-        sensors.append(sensor("weight_delta_30d", "weight Δ 30d", stats["delta"], "kg",
+        sensors.append(sensor("weight_delta_30d", "weight delta 30d", stats["delta"], "kg",
                               "mdi:scale-balance"))
         sensors.append(sensor("weight_min_30d", "weight min 30d", stats["min"], "kg",
                               "mdi:arrow-down-bold"))
@@ -253,7 +257,7 @@ async def _member_sensors(member: str, today: date) -> list[Sensor]:
     else:
         weight = profile.get("weight_kg") if profile else None
         bmi = profile.get("bmi") if profile else None
-        sensors.append(sensor("weight_delta_30d", "weight Δ 30d", blank, "kg", "mdi:scale-balance"))
+        sensors.append(sensor("weight_delta_30d", "weight delta 30d", blank, "kg", "mdi:scale-balance"))
         sensors.append(sensor("weight_min_30d", "weight min 30d", blank, "kg", "mdi:arrow-down-bold"))
         sensors.append(sensor("weight_max_30d", "weight max 30d", blank, "kg", "mdi:arrow-up-bold"))
     sensors.append(sensor("weight", "weight", weight if weight is not None else blank, "kg",
