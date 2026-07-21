@@ -186,7 +186,8 @@ def _schedule_mqtt_mirror(scheduler: Scheduler, settings) -> None:
     """
     if not settings.ha.mqtt_host:
         return
-    from ..connectors.ha import MqttMirror, publish_dashboards, publish_finance
+    from ..connectors.ha import (
+        MqttMirror, publish_dashboards, publish_finance, publish_native)
     mirror = MqttMirror(settings.ha)
 
     async def _refresh() -> None:
@@ -195,16 +196,24 @@ def _schedule_mqtt_mirror(scheduler: Scheduler, settings) -> None:
         except Exception as error:
             logger.warning("MQTT finance mirror failed: %s", error)
 
-    async def _refresh_dashboards() -> None:
+    async def _refresh_native() -> None:
+        try:
+            await publish_native(mirror)
+        except Exception as error:
+            logger.warning("MQTT native dashboard publish failed: %s", error)
+
+    async def _refresh_compat() -> None:
         try:
             await publish_dashboards(mirror)
         except Exception as error:
-            logger.warning("MQTT dashboard publish failed: %s", error)
+            logger.warning("MQTT compat dashboard publish failed: %s", error)
 
     scheduler.schedule_cron("mqtt_finance_mirror", "*/15 * * * *", _refresh)
-    # Feed the existing HARIA Lovelace dashboards (bollette/economia/food) so they
-    # keep updating now that LARIA has replaced HARIA as the publisher.
-    scheduler.schedule_cron("mqtt_dashboards", "*/15 * * * *", _refresh_dashboards)
+    # Canonical LARIA-native dashboard entities (laria_ namespace, English model).
+    scheduler.schedule_cron("mqtt_dashboards_native", "*/15 * * * *", _refresh_native)
+    # HARIA-compat entities, kept only until the Lovelace dashboards point at the
+    # native ones; removed on the HARIA cut-over.
+    scheduler.schedule_cron("mqtt_dashboards", "*/15 * * * *", _refresh_compat)
 
 
 def serve() -> None:
