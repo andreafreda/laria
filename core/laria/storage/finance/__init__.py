@@ -42,6 +42,7 @@ from .reports import (
     category_spending_year,
     expense_summary,
     get_balances,
+    month_transactions,
     monthly_category_matrix,
     monthly_trend,
     recent_transactions,
@@ -84,5 +85,5 @@ __all__ = [
     # reports
     "reset_finance", "get_balances", "balances_by_owner", "expense_summary",
     "monthly_trend", "category_spending_year", "years_with_data",
-    "monthly_category_matrix", "recent_transactions",
+    "monthly_category_matrix", "recent_transactions", "month_transactions",
 ]

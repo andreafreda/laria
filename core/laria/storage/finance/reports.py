@@ -314,6 +314,27 @@ async def recent_transactions(months: int | None = None) -> list[dict]:
     ]
 
 
+async def month_transactions(year: int, month: int) -> list[dict]:
+    """Individual expenses of one calendar month, newest first.
+
+    Same shape as ``recent_transactions`` but scoped to a single month, for the
+    month drill-down card. Excludes internal transfers; amounts are positive.
+    """
+    prefix = f"{int(year):04d}-{int(month):02d}-%"
+    async with connect() as conn:
+        cur = await conn.execute(
+            "SELECT date, -amount, category, description FROM finance_transactions "
+            "WHERE amount<0 AND category!=? AND date LIKE ? ORDER BY date DESC",
+            (CATEGORY_TRANSFER, prefix),
+        )
+        rows = await cur.fetchall()
+    return [
+        {"date": row[0], "amount": round(float(row[1]), 2), "category": row[2],
+         "description": (row[3] or "").strip()}
+        for row in rows
+    ]
+
+
 def _first_day_n_months_back(today: date, months: int) -> str:
     """First day (YYYY-MM-01) of the month ``months`` ago, counting this month."""
     year, month = today.year, today.month

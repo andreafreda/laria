@@ -73,6 +73,9 @@ async def test_collect_finance_english_ids_and_attrs(db):
     txns = next(s for s in sensors if s.uid == "laria_finance_recent_transactions")
     assert txns.attr["transactions"][0]["category"] == "groceries"
 
+    month = next(s for s in sensors if s.uid == "laria_finance_transactions_month")
+    assert month.attr["rows"][0]["category"] == "groceries"  # March tx, current month
+
 
 async def test_collect_diet_english_ids(db):
     await food.upsert_profile("andrea", {"kcal_target": 2000, "weight_kg": 80.0})

@@ -83,7 +83,18 @@ async def collect_finance(today: date | None = None) -> list[Sensor]:
     sensors += await _budget_sensors(today)
     sensors += await _goal_sensors()
     sensors += await _history_sensors()
+    sensors.append(await _month_transactions_sensor(today))
     return sensors
+
+
+async def _month_transactions_sensor(today: date) -> Sensor:
+    _, _, year, month = m.month_bounds(today)
+    rows = await finance.month_transactions(year, month)
+    return _finance(
+        "laria_finance_transactions_month", "Transactions month",
+        f"{_STATE_FINANCE}/transactions_month/state", len(rows),
+        icon="mdi:format-list-bulleted-square",
+        attr_topic=f"{_STATE_FINANCE}/transactions_month/attr", attr={"rows": rows})
 
 
 def _finance(uid: str, name: str, topic: str, value: object, **extra) -> Sensor:
