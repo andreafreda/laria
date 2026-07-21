@@ -5,13 +5,20 @@ resta per un prodotto completo/vendibile. Aggiornato 2026-07-20.
 
 ## Robustezza / parità (piccoli)
 
-- [ ] **Fallback climate turn_off/on** nel connettore HA di LARIA (`connectors/ha`):
-      quando l'entità non supporta turn_off/turn_on (HA risponde 400 o 500),
-      ripiegare su `set_hvac_mode` (off / auto). Stesso fix già fatto su HARIA.
+- [x] **Fallback climate turn_off/on** (FATTO): `connectors/ha/client.py`
+      `_climate_hvac_fallback` ripiega su `set_hvac_mode` (off/auto) su 400/500.
 - [ ] **Risoluzione nome → entity_id** nel control HA: evitare che l'LLM tiri a
       indovinare id (es. `climate.salone` invece di quello reale). Mappare il
       nome richiesto all'entità giusta prima di chiamare il servizio.
-- [ ] **MQTT**: oggi solo sensori finance; aggiungere food e bollette.
+- [x] **MQTT dashboard HARIA-compat** (FATTO): LARIA ripubblica le entità MQTT
+      con gli **unique_id/topic esatti di HARIA** (device HARIA Bollette/Economia/Cibo)
+      → le dashboard Lovelace esistenti si aggiornano senza modifiche. Vedi
+      `connectors/ha/compat.py` (bollette+economia+food), tabella `mqtt_topics` per
+      cleanup entità fantasma, cron `mqtt_dashboards` ogni 15min. **LIVE in prod
+      dal 2026-07-21**: login broker `laria` su Mosquitto, `.env` NAS con MQTT_*,
+      `paho-mqtt` ora dep core. Verificato: bollette/economia/food aggiornati.
+- [ ] **MQTT namespaced `laria_`**: il mirror finance nativo resta; valutare se
+      estenderlo o dismetterlo ora che c'è il path compat.
 - [ ] **Scheduler nel processo web**: reminder/briefing creati da web partono solo
       al riavvio del processo Telegram. Valutare uno scheduler condiviso/persistente.
 
@@ -19,9 +26,11 @@ resta per un prodotto completo/vendibile. Aggiornato 2026-07-20.
 
 - [x] **Notifiche eventi ricorrenti** (compleanni/anniversari/custom): FATTO —
       tabella `events` + tool `add_event/list_events/delete_event` + job giornaliero
-      08:00 (`notifier.send_due_events`), anticipo configurabile (`notify_days_before`).
-- [ ] **Onomastici**: mappa nome→data (calendario santi IT) + notifica onomastico.
-      Rimandato (serve il dataset santi). Aggancio: stesso `events` con kind=nameday.
+      08:00 (`notifier.send_due_events`), anticipi multipli discreti (`notify_offsets`:
+      1 mese/1 settimana/2 giorni/1 giorno/stesso giorno).
+- [x] **Onomastici** (RISOLTO senza dataset): l'utente crea un evento `kind=nameday`
+      a mano; la data si trova con `search_web` (tool web search on-demand, FATTO).
+      Nessun calendario santi hardcoded.
 - [ ] **Push HA** per gli eventi (oltre a Telegram): opzionale, via `persistent_notification`
       o notify mobile quando HA abilitato.
 
