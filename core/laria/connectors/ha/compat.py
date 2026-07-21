@@ -202,7 +202,9 @@ async def _balance_sensors() -> list[CompatSensor]:
 async def _spending_sensors(today: date) -> list[CompatSensor]:
     first, last, _, _ = _month_bounds(today)
     rep = await finance.expense_summary(date_from=first, date_to=last)
-    spent = round(-rep["expenses"], 2)  # expenses are negative; show amount spent
+    # expenses are negative; show the amount spent. ``or 0.0`` collapses -0.0 (an
+    # empty month) so the dashboard reads "0.0 €" rather than "-0.0 €".
+    spent = round(-rep["expenses"], 2) or 0.0
     sensors = [CompatSensor(
         uid="haria_econ_spese_mese", object_id="economia_spese_mese",
         name="Spese mese", device=_DEVICE_ECON,
@@ -215,7 +217,7 @@ async def _spending_sensors(today: date) -> list[CompatSensor]:
     )]
     prev_first, prev_last = _prev_month_bounds(today)
     prev = await finance.expense_summary(date_from=prev_first, date_to=prev_last)
-    spent_prev = round(-prev["expenses"], 2)
+    spent_prev = round(-prev["expenses"], 2) or 0.0
     sensors.append(CompatSensor(
         uid="haria_econ_spese_mese_prec", object_id="economia_spese_mese_prec",
         name="Spese mese scorso", device=_DEVICE_ECON,
@@ -226,7 +228,7 @@ async def _spending_sensors(today: date) -> list[CompatSensor]:
         uid="haria_econ_spese_mese_delta", object_id="economia_spese_mese_delta",
         name="Spese vs mese scorso", device=_DEVICE_ECON,
         state_topic=f"{_STATE_ECON}/spese_mese_delta",
-        value=round(spent - spent_prev, 2), unit="€", icon="mdi:swap-vertical",
+        value=round(spent - spent_prev, 2) or 0.0, unit="€", icon="mdi:swap-vertical",
     ))
     return sensors
 
