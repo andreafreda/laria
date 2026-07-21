@@ -1,0 +1,22 @@
+[
+  {"query": "can you refactor this orders module? it works but it's a mess, deeply nested ifs and variables named like tmp2, nobody on the team wants to touch it", "should_trigger": true},
+  {"query": "I'm about to write a new service for parsing CSV uploads in our django app. want it clean and easy for the next person to read", "should_trigger": true},
+  {"query": "review my PR diff before I push, mostly care that it reads well and a junior could follow it", "should_trigger": true},
+  {"query": "this function is one giant 80-line list comprehension and I can't understand it anymore, help", "should_trigger": true},
+  {"query": "we're adding a payments adapter. write it so it's obvious and maintainable, not clever", "should_trigger": true},
+  {"query": "rewrite this typescript util to be more readable, it's full of one-letter names and nested ternaries", "should_trigger": true},
+  {"query": "/codecraft", "should_trigger": true},
+  {"query": "make this python class less of an abstraction tower, it's got a factory and 3 interfaces for a single use case", "should_trigger": true},
+  {"query": "I just inherited this go codebase, can you clean up the error handling in handlers.go so it's consistent and readable", "should_trigger": true},
+  {"query": "this endpoint is too slow under load, profile it and make it faster, p99 is 800ms and the SLA is 200", "should_trigger": false},
+  {"query": "prod is down, users can't log in, find and fix the auth bug ASAP", "should_trigger": false},
+  {"query": "do a security review of this file upload handler, I'm worried about path traversal and arbitrary file write", "should_trigger": false},
+  {"query": "why is this test failing? it throws a KeyError on line 42 when I run pytest", "should_trigger": false},
+  {"query": "set up a github actions workflow to run our pytest suite on every push to main", "should_trigger": false},
+  {"query": "explain how React's reconciliation algorithm decides which DOM nodes to update", "should_trigger": false},
+  {"query": "write end-user documentation for our public REST API endpoints", "should_trigger": false},
+  {"query": "optimize this SQL query, it's doing a full table scan on a 10M row orders table", "should_trigger": false},
+  {"query": "convert these 2000 product rows from the xlsx in my downloads into a json file", "should_trigger": false},
+  {"query": "what's the practical difference between a process and a thread, with an example", "should_trigger": false},
+  {"query": "help me write a cover letter for a senior backend engineer role at a fintech", "should_trigger": false}
+]

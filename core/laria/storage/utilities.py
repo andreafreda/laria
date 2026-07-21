@@ -87,6 +87,19 @@ async def get_bill_years(utility: str, metric: str) -> list[int]:
         return [r[0] for r in await cur.fetchall()]
 
 
+async def list_bill_series() -> list[tuple[str, str]]:
+    """Distinct (utility, metric) pairs present in the data.
+
+    Drives the MQTT compat publisher: one sensor series per pair, spread across
+    its years. Ordered so the published set is stable between runs.
+    """
+    async with connect() as db:
+        cur = await db.execute(
+            "SELECT DISTINCT utility, metric FROM utility_bills ORDER BY utility, metric"
+        )
+        return [(r[0], r[1]) for r in await cur.fetchall()]
+
+
 async def bills_empty() -> bool:
     async with connect() as db:
         cur = await db.execute("SELECT 1 FROM utility_bills LIMIT 1")

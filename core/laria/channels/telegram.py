@@ -177,15 +177,16 @@ def _schedule_food_jobs(scheduler: Scheduler, food_jobs: FoodBroadcaster) -> Non
 
 
 def _schedule_mqtt_mirror(scheduler: Scheduler, settings) -> None:
-    """Mirror finance sensors to MQTT every 15 minutes, when a broker is set.
+    """Mirror LARIA data to MQTT every 15 minutes, when a broker is set.
 
-    Only registered if a HA MQTT host is configured, so a deployment without MQTT
-    runs unchanged. The publish itself is best effort: a broker outage logs and
-    is retried at the next tick.
+    Two jobs: LARIA's own namespaced finance sensors, and the HARIA compatible
+    dashboard entities (bollette/economia/food). Only registered if a HA MQTT
+    host is configured, so a deployment without MQTT runs unchanged. Each publish
+    is best effort: a broker outage logs and is retried at the next tick.
     """
     if not settings.ha.mqtt_host:
         return
-    from ..connectors.ha import MqttMirror, publish_finance
+    from ..connectors.ha import MqttMirror, publish_dashboards, publish_finance
     mirror = MqttMirror(settings.ha)
 
     async def _refresh() -> None:
@@ -194,7 +195,16 @@ def _schedule_mqtt_mirror(scheduler: Scheduler, settings) -> None:
         except Exception as error:
             logger.warning("MQTT finance mirror failed: %s", error)
 
+    async def _refresh_dashboards() -> None:
+        try:
+            await publish_dashboards(mirror)
+        except Exception as error:
+            logger.warning("MQTT dashboard publish failed: %s", error)
+
     scheduler.schedule_cron("mqtt_finance_mirror", "*/15 * * * *", _refresh)
+    # Feed the existing HARIA Lovelace dashboards (bollette/economia/food) so they
+    # keep updating now that LARIA has replaced HARIA as the publisher.
+    scheduler.schedule_cron("mqtt_dashboards", "*/15 * * * *", _refresh_dashboards)
 
 
 def serve() -> None:

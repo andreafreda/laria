@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>codecraft triggering probe</title><style>
+:root { color-scheme: light dark; }
+body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 980px;
+  padding: 0 1rem; color: #1a1a1a; background: #fafafa; }
+h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+.note { color: #666; margin: 0 0 1.5rem; }
+.cards { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.card { background: #fff; border: 1px solid #e3e3e3; border-radius: 10px;
+  padding: 1rem 1.25rem; min-width: 130px; }
+.card .v { font-size: 1.9rem; font-weight: 700; }
+.card .l { font-weight: 600; margin-top: .2rem; }
+.card .s { color: #777; font-size: .85rem; }
+table { width: 100%; border-collapse: collapse; background: #fff;
+  border: 1px solid #e3e3e3; border-radius: 10px; overflow: hidden; }
+th, td { text-align: left; padding: .6rem .75rem; border-bottom: 1px solid #eee; }
+th { background: #f3f3f3; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+td.b { font-weight: 700; }
+tr.pass td.b { color: #137333; }
+tr.fail td.b { color: #c5221f; }
+tr.fail { background: #fff5f5; }
+.rate { font-variant-numeric: tabular-nums; }
+.q { color: #333; }
+</style></head><body>
+<h1>codecraft triggering probe</h1>
+<p class="note">Real installed skill, headless, user settings excluded (no caveman).
+12/20 queries scored (in progress).
+Positives are scored first, so specificity stays n/a until negatives are reached.
+Trigger = a Skill call to codecraft or a read of a codecraft file. Pass threshold 0.5.</p>
+<div class="cards">
+<div class="card"><div class="v">67%</div><div class="l">Recall</div><div class="s">6/9 should-trigger caught</div></div>
+<div class="card"><div class="v">100%</div><div class="l">Specificity</div><div class="s">3/3 negatives held</div></div>
+<div class="card"><div class="v">75%</div><div class="l">Accuracy</div><div class="s">9/12 scored</div></div>
+</div>
+<table><thead><tr><th>Result</th><th>Expectation</th><th>Fired</th><th>Query</th></tr></thead>
+<tbody><tr class="pass"><td class="b">PASS</td><td>should trigger</td><td class="rate">1/2</td><td class="q">can you refactor this orders module? it works but it's a mess, de</td></tr><tr class="pass"><td class="b">PASS</td><td>should trigger</td><td class="rate">2/2</td><td class="q">I'm about to write a new service for parsing CSV uploads in our d</td></tr><tr class="pass"><td class="b">PASS</td><td>should trigger</td><td class="rate">2/2</td><td class="q">review my PR diff before I push, mostly care that it reads well a</td></tr><tr class="pass"><td class="b">PASS</td><td>should trigger</td><td class="rate">1/2</td><td class="q">this function is one giant 80-line list comprehension and I can't</td></tr><tr class="pass"><td class="b">PASS</td><td>should trigger</td><td class="rate">2/2</td><td class="q">we're adding a payments adapter. write it so it's obvious and mai</td></tr><tr class="fail"><td class="b">FAIL</td><td>should trigger</td><td class="rate">0/2</td><td class="q">rewrite this typescript util to be more readable, it's full of on</td></tr><tr class="fail"><td class="b">FAIL</td><td>should trigger</td><td class="rate">0/2</td><td class="q">/codecraft</td></tr><tr class="pass"><td class="b">PASS</td><td>should trigger</td><td class="rate">2/2</td><td class="q">make this python class less of an abstraction tower, it's got a f</td></tr><tr class="fail"><td class="b">FAIL</td><td>should trigger</td><td class="rate">0/2</td><td class="q">I just inherited this go codebase, can you clean up the error han</td></tr><tr class="pass"><td class="b">PASS</td><td>should NOT trigger</td><td class="rate">0/2</td><td class="q">this endpoint is too slow under load, profile it and make it fast</td></tr><tr class="pass"><td class="b">PASS</td><td>should NOT trigger</td><td class="rate">0/2</td><td class="q">prod is down, users can't log in, find and fix the auth bug ASAP</td></tr><tr class="pass"><td class="b">PASS</td><td>should NOT trigger</td><td class="rate">0/2</td><td class="q">do a security review of this file upload handler, I'm worried abo</td></tr></tbody></table>
+</body></html>

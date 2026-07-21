@@ -72,6 +72,7 @@ async def init_db() -> None:
         await db.executescript(_IDENTITY_SCHEMA)
         await db.executescript(_LISTS_SCHEMA)
         await db.executescript(_EVENTS_SCHEMA)
+        await db.executescript(_MQTT_TOPICS_SCHEMA)
         await _migrate(db)
 
         # Seed generic default categories (idempotent, no personal data).
@@ -398,4 +399,16 @@ CREATE TABLE IF NOT EXISTS events (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_events_active ON events(active);
+"""
+
+# What the MQTT compat publisher last put on the broker, per dashboard kind
+# (bollette/economia/food). Lets it empty the config topic of an entity that
+# disappeared so no ghost sensor lingers in Home Assistant across restarts.
+_MQTT_TOPICS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS mqtt_topics (
+    kind TEXT NOT NULL,
+    config_topic TEXT NOT NULL,
+    state_topics TEXT NOT NULL DEFAULT '[]',
+    PRIMARY KEY (kind, config_topic)
+);
 """

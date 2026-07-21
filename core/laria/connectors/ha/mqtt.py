@@ -107,11 +107,32 @@ class MqttMirror:
     def __init__(self, settings: HASettings | None = None):
         self._ha = settings or get_settings().ha
 
+    @property
+    def discovery_prefix(self) -> str:
+        """HA's MQTT discovery root; the compat publisher builds config topics on it."""
+        return self._ha.mqtt_discovery_prefix
+
     def publish(self, sensors: list[Sensor]) -> None:
         """Publish discovery configs and current states for the given sensors.
 
         Synchronous (paho is blocking); call via ``asyncio.to_thread`` from async
-        code. Imports paho-mqtt lazily so it is only required when mirroring runs.
+        code.
+        """
+        messages: list[tuple[str, object]] = []
+        for sensor in sensors:
+            config_topic, config, state_topic = discovery_payload(
+                sensor, self._ha.mqtt_node_id, self._ha.mqtt_discovery_prefix)
+            messages.append((config_topic, config))
+            messages.append((state_topic, sensor.value))
+        self.publish_messages(messages)
+
+    def publish_messages(self, messages: list[tuple[str, object]]) -> None:
+        """Publish a batch of (topic, payload) pairs, all retained.
+
+        A dict or list payload is JSON encoded; anything else (number, string,
+        or "" to clear a retained topic) is sent as is. Synchronous; call via
+        ``asyncio.to_thread`` from async code. Imports paho-mqtt lazily so the
+        dependency is only needed when mirroring runs.
         """
         try:
             import paho.mqtt.client as mqtt
@@ -126,11 +147,9 @@ class MqttMirror:
         client.connect(self._ha.mqtt_host, self._ha.mqtt_port)
         client.loop_start()
         try:
-            for sensor in sensors:
-                config_topic, config, state_topic = discovery_payload(
-                    sensor, self._ha.mqtt_node_id, self._ha.mqtt_discovery_prefix)
-                client.publish(config_topic, json.dumps(config), retain=True)
-                client.publish(state_topic, sensor.value, retain=True)
+            for topic, payload in messages:
+                data = json.dumps(payload) if isinstance(payload, (dict, list)) else payload
+                client.publish(topic, data, retain=True)
         finally:
             client.loop_stop()
             client.disconnect()

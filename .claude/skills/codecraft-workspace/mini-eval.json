@@ -1,0 +1,4 @@
+[
+  {"query": "can you refactor this orders module? it works but it's a mess, deeply nested ifs and variables named tmp2, nobody on the team wants to touch it", "should_trigger": true},
+  {"query": "prod is down, users can't log in, find and fix the auth bug ASAP", "should_trigger": false}
+]
