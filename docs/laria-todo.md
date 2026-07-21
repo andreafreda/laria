@@ -17,8 +17,11 @@ resta per un prodotto completo/vendibile. Aggiornato 2026-07-20.
       cleanup entità fantasma, cron `mqtt_dashboards` ogni 15min. **LIVE in prod
       dal 2026-07-21**: login broker `laria` su Mosquitto, `.env` NAS con MQTT_*,
       `paho-mqtt` ora dep core. Verificato: bollette/economia/food aggiornati.
-- [ ] **MQTT namespaced `laria_`**: il mirror finance nativo resta; valutare se
-      estenderlo o dismetterlo ora che c'è il path compat.
+- [x] **Disaccoppiamento HARIA (MQTT `laria_` nativo)** FATTO: LARIA pubblica un
+      modello entità inglese pulito (`laria_finance_*`/`laria_utility_*`/`laria_diet_*`,
+      device LARIA Finance/Utilities/Diet). Le 3 dashboard Lovelace ripuntate via MCP
+      (bollette/economia/food). Compat `haria_` + finance mirror namespaced rimossi;
+      97 entità HARIA/mirror ritirate. Vedi `connectors/ha/dashboards.py` + `_mqtt_model.py`.
 - [ ] **Scheduler nel processo web**: reminder/briefing creati da web partono solo
       al riavvio del processo Telegram. Valutare uno scheduler condiviso/persistente.
 

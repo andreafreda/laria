@@ -26,16 +26,19 @@ fotografia completa (fatto + cosa manca + infrastruttura).
 - **Controllo HA** abilitato (`HA_URL=192.168.1.32:8123`).
 - **Fallback climate turn_off/on**: `connectors/ha/client.py` ripiega su
   `set_hvac_mode` (off/auto) quando HA risponde 400/500.
-- **MQTT dashboard HARIA-compat — LIVE in prod**: LARIA ripubblica le entità MQTT
-  con gli **unique_id/topic esatti di HARIA** (device HARIA Bollette/Economia/Cibo)
-  → le dashboard Lovelace esistenti si aggiornano da LARIA senza modifiche.
-  - `connectors/ha/compat.py`: bollette (da `utility_bills`), economia (saldi,
-    spese mese/delta, budget, obiettivi, storico, movimenti), food (per-membro
-    kcal/macro/peso/bmi/diario + piano oggi/settimana/mese + spesa + dispensa).
-  - Tabella `mqtt_topics` per cleanup entità fantasma tra restart.
-  - Cron `mqtt_dashboards` ogni 15min.
-  - Verificato: bollette con valori reali, economia (saldo 1709.52€, movimenti
-    1617), food (piano).
+- **MQTT nativo `laria_` — disaccoppiato da HARIA (LIVE)**: LARIA pubblica un
+  modello entità inglese pulito, device LARIA Finance/Utilities/Diet. Es.
+  `sensor.laria_finance_total_balance`, `sensor.laria_utilities_electricity_cost_2026`,
+  `sensor.laria_diet_andrea_kcal_today`. (NB: HA compone entity_id da device+nome,
+  ignora object_id.)
+  - `connectors/ha/dashboards.py` (collector utilities/finance/diet + `publish_native`)
+    + `connectors/ha/_mqtt_model.py` (Sensor + builder + publish + cleanup `mqtt_topics`).
+    `finance.month_transactions` per il drilldown mese. Cron `mqtt_dashboards_native` 15min.
+  - **Dashboard Lovelace ripuntate** via MCP (`bollette-consumi-v2`, `haria-economia`,
+    `haria-cibo`): entity_id + chiavi attr IT→EN.
+  - Rimossi il compat `haria_` e il vecchio finance mirror namespaced; **97 entità**
+    HARIA/mirror ritirate. Backup pre-migrazione: HA snapshot `73c200e5` + `laria.db` bak.
+  - Verificato: 88 entità `laria_` con valori reali; zero residui `haria_`.
 
 ### Deploy / dati
 - **Produzione su NAS QNAP** (`192.168.1.118`) via GHCR + Watchtower: push su
