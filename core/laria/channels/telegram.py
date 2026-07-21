@@ -177,43 +177,23 @@ def _schedule_food_jobs(scheduler: Scheduler, food_jobs: FoodBroadcaster) -> Non
 
 
 def _schedule_mqtt_mirror(scheduler: Scheduler, settings) -> None:
-    """Mirror LARIA data to MQTT every 15 minutes, when a broker is set.
+    """Publish the LARIA-native dashboard entities to MQTT every 15 minutes.
 
-    Two jobs: LARIA's own namespaced finance sensors, and the HARIA compatible
-    dashboard entities (bollette/economia/food). Only registered if a HA MQTT
-    host is configured, so a deployment without MQTT runs unchanged. Each publish
-    is best effort: a broker outage logs and is retried at the next tick.
+    Only registered if a HA MQTT host is configured, so a deployment without MQTT
+    runs unchanged. Best effort: a broker outage logs and is retried next tick.
     """
     if not settings.ha.mqtt_host:
         return
-    from ..connectors.ha import (
-        MqttMirror, publish_dashboards, publish_finance, publish_native)
+    from ..connectors.ha import MqttMirror, publish_native
     mirror = MqttMirror(settings.ha)
-
-    async def _refresh() -> None:
-        try:
-            await publish_finance(mirror)
-        except Exception as error:
-            logger.warning("MQTT finance mirror failed: %s", error)
 
     async def _refresh_native() -> None:
         try:
             await publish_native(mirror)
         except Exception as error:
-            logger.warning("MQTT native dashboard publish failed: %s", error)
+            logger.warning("MQTT dashboard publish failed: %s", error)
 
-    async def _refresh_compat() -> None:
-        try:
-            await publish_dashboards(mirror)
-        except Exception as error:
-            logger.warning("MQTT compat dashboard publish failed: %s", error)
-
-    scheduler.schedule_cron("mqtt_finance_mirror", "*/15 * * * *", _refresh)
-    # Canonical LARIA-native dashboard entities (laria_ namespace, English model).
     scheduler.schedule_cron("mqtt_dashboards_native", "*/15 * * * *", _refresh_native)
-    # HARIA-compat entities, kept only until the Lovelace dashboards point at the
-    # native ones; removed on the HARIA cut-over.
-    scheduler.schedule_cron("mqtt_dashboards", "*/15 * * * *", _refresh_compat)
 
 
 def serve() -> None:
